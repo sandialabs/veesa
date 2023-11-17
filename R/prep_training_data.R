@@ -7,7 +7,7 @@
 #' @param time Vector of size M describing the sample points
 #' @param fpca_method Character string specifying the type of elastic fPCA method to use ('jfpca', 'hfpca', or 'vfpca')
 #' @param ci Geodesic standard deviations to be computed (default = c(-2, -1, 0, 1, 2))
-#' @param omethod Method used for optimization when computing the Karcher mean (DP,DP2,RBFGS,DPo)
+#' @param optim_method Method used for optimization when computing the Karcher mean (DP,DP2,RBFGS,DPo)
 #'
 #' @export prep_training_data
 #'
@@ -21,7 +21,8 @@
 #'   \item fpca_res: output from fdasrvf::jointFPCA, fdasrvf::horizFPCA, or fdasrvf::vertFPCA (dependent on fpca_type)
 #' }
 
-prep_training_data <- function(f, time, fpca_method, ci = c(-2, -1, 0, 1, 2), omethod = "DP") {
+prep_training_data <- function(f, time, fpca_method, ci = c(-2, -1, 0, 1, 2), 
+                               optim_method = "DP") {
 
   # Make sure 'fpca_method' is all lower case
   fpca_method = tolower(fpca_method)
@@ -33,7 +34,14 @@ prep_training_data <- function(f, time, fpca_method, ci = c(-2, -1, 0, 1, 2), om
   time = seq(0, 1, length.out = length(time))
 
   # Apply time_warping from fdasrvf to training data
-  aligned <- fdasrvf::time_warping(f = f, time = time, showplot = F, parallel = T, omethod = omethod, center = F)
+  aligned <- 
+    fdasrvf::time_warping(
+      f = f, 
+      time = time, 
+      parallel = T, 
+      optim_method = optim_method, 
+      center = F
+    )
 
   # Apply an elastic fPCA to the adjusted aligned training data using fdasrvf
   if (fpca_method == "jfpca") {

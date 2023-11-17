@@ -82,92 +82,25 @@ train_transformed_jfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "jfpca",
-    omethod = "DPo"
+    optim_method = "DP"
   )
-```
 
-    ## lambda =   0.0 
-    ## 
-    ## Initializing...
-    ## Computing Karcher mean of 75 functions in SRSF space...
-    ## updating step: r=1
-    ## updating step: r=2
-    ## updating step: r=3
-    ## updating step: r=4
-    ## updating step: r=5
-    ## updating step: r=6
-    ## updating step: r=7
-    ## updating step: r=8
-    ## updating step: r=9
-    ## updating step: r=10
-    ## updating step: r=11
-    ## updating step: r=12
-    ## updating step: r=13
-    ## updating step: r=14
-    ## updating step: r=15
-    ## updating step: r=16
-
-``` r
 train_transformed_vfpca <-
   prep_training_data(
     f = sim_train_matrix,
     time = times, 
     fpca_method = "vfpca",
-    omethod = "DPo"
+    optim_method = "DP"
   )
-```
 
-    ## lambda =   0.0 
-    ## 
-    ## Initializing...
-    ## Computing Karcher mean of 75 functions in SRSF space...
-    ## updating step: r=1
-    ## updating step: r=2
-    ## updating step: r=3
-    ## updating step: r=4
-    ## updating step: r=5
-    ## updating step: r=6
-    ## updating step: r=7
-    ## updating step: r=8
-    ## updating step: r=9
-    ## updating step: r=10
-    ## updating step: r=11
-    ## updating step: r=12
-    ## updating step: r=13
-    ## updating step: r=14
-    ## updating step: r=15
-    ## updating step: r=16
-
-``` r
 train_transformed_hfpca <-
   prep_training_data(
     f = sim_train_matrix,
     time = times, 
     fpca_method = "hfpca",
-    omethod = "DPo"
+    optim_method = "DP"
   )
 ```
-
-    ## lambda =   0.0 
-    ## 
-    ## Initializing...
-    ## Computing Karcher mean of 75 functions in SRSF space...
-    ## updating step: r=1
-    ## updating step: r=2
-    ## updating step: r=3
-    ## updating step: r=4
-    ## updating step: r=5
-    ## updating step: r=6
-    ## updating step: r=7
-    ## updating step: r=8
-    ## updating step: r=9
-    ## updating step: r=10
-    ## updating step: r=11
-    ## updating step: r=12
-    ## updating step: r=13
-    ## updating step: r=14
-    ## updating step: r=15
-    ## updating step: r=16
 
 Prepare test data:
 
@@ -177,7 +110,7 @@ test_transformed_jfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_jfpca,
-    omethod = "DPo"
+    optim_method = "DP"
   )
 
 test_transformed_vfpca <-
@@ -185,7 +118,7 @@ test_transformed_vfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_vfpca,
-    omethod = "DPo"
+    optim_method = "DP"
   )
 
 test_transformed_hfpca <-
@@ -193,7 +126,7 @@ test_transformed_hfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_hfpca,
-    omethod = "DPo"
+    optim_method = "DP"
   )
 ```
 
@@ -257,9 +190,30 @@ Compute PFI:
 
 ``` r
 set.seed(20211130)
-pfi_jfpca = compute_pfi(x = rf_jfpca_df %>% select(-x1), y = rf_jfpca_df$x1, f = rf_jfpca, K = 10, metric = "nmse")
-pfi_vfpca = compute_pfi(x = rf_vfpca_df %>% select(-x1), y = rf_vfpca_df$x1, f = rf_vfpca, K = 10, metric = "nmse")
-pfi_hfpca = compute_pfi(x = rf_hfpca_df %>% select(-x1), y = rf_hfpca_df$x1, f = rf_hfpca, K = 10, metric = "nmse")
+pfi_jfpca <-
+  compute_pfi(
+    x = rf_jfpca_df %>% select(-x1),
+    y = rf_jfpca_df$x1,
+    f = rf_jfpca,
+    K = 10,
+    metric = "nmse"
+  )
+pfi_vfpca <-
+  compute_pfi(
+    x = rf_vfpca_df %>% select(-x1),
+    y = rf_vfpca_df$x1,
+    f = rf_vfpca,
+    K = 10,
+    metric = "nmse"
+  )
+pfi_hfpca <-
+  compute_pfi(
+    x = rf_hfpca_df %>% select(-x1),
+    y = rf_hfpca_df$x1,
+    f = rf_hfpca,
+    K = 10,
+    metric = "nmse"
+  )
 ```
 
 PFI results (mean of reps):
@@ -298,31 +252,3 @@ top_pc_hfpca <-
 Principal directions of top PC for each jfPCA method:
 
 ![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
-
-# Comparing Centered versus Not-Centered Warping Functions
-
-Apply alignment to jfPCA principal directions:
-
-``` r
-train_transformed_jfpca_centered = center_warping_funs(train_obj = train_transformed_jfpca)
-```
-
-Warping functions before/after centering:
-
-![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-20-2.png)<!-- -->
-
-Aligned functions before/after centering:
-
-![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
-
-# Comparing Aligned vs Not-Aligned jfPCA PC Directions
-
-Apply alignment to jfPCA principal directions:
-
-``` r
-jfpca_pcdirs_aligned = align_pcdirs(train_obj = train_transformed_jfpca)
-```
-
-Joint:
-
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->

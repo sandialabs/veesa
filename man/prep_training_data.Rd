@@ -9,7 +9,7 @@ prep_training_data(
   time,
   fpca_method,
   ci = c(-2, -1, 0, 1, 2),
-  omethod = "DP"
+  optim_method = "DP"
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ prep_training_data(
 
 \item{ci}{Geodesic standard deviations to be computed (default = c(-2, -1, 0, 1, 2))}
 
-\item{omethod}{Method used for optimization when computing the Karcher mean (DP,DP2,RBFGS,DPo)}
+\item{optim_method}{Method used for optimization when computing the Karcher mean (DP,DP2,RBFGS,DPo)}
 }
 \value{
 List with three objects: 

@@ -31,7 +31,7 @@ align_pcdirs <- function(train_obj) {
   pc_dirs = train_obj$fpca_res$f_pca
   
   # Compute gamma inverse
-  gamI = fdasrvf:::SqrtMeanInverse(t(gam))
+  gamI = fdasrvf::SqrtMeanInverse(t(gam))
   
   # Extract number of principal directions and number of PCs
   ndirs = dim(pc_dirs)[2]

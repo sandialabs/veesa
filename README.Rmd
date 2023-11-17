@@ -102,7 +102,7 @@ train_transformed_jfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "jfpca",
-    omethod = "DPo"
+    optim_method = "DP"
   )
 
 train_transformed_vfpca <-
@@ -110,7 +110,7 @@ train_transformed_vfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "vfpca",
-    omethod = "DPo"
+    optim_method = "DP"
   )
 
 train_transformed_hfpca <-
@@ -118,7 +118,7 @@ train_transformed_hfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "hfpca",
-    omethod = "DPo"
+    optim_method = "DP"
   )
 ```
 
@@ -130,7 +130,7 @@ test_transformed_jfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_jfpca,
-    omethod = "DPo"
+    optim_method = "DP"
   )
 
 test_transformed_vfpca <-
@@ -138,7 +138,7 @@ test_transformed_vfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_vfpca,
-    omethod = "DPo"
+    optim_method = "DP"
   )
 
 test_transformed_hfpca <-
@@ -146,7 +146,7 @@ test_transformed_hfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_hfpca,
-    omethod = "DPo"
+    optim_method = "DP"
   )
 ```
 
@@ -315,9 +315,30 @@ Compute PFI:
 
 ```{r}
 set.seed(20211130)
-pfi_jfpca = compute_pfi(x = rf_jfpca_df %>% select(-x1), y = rf_jfpca_df$x1, f = rf_jfpca, K = 10, metric = "nmse")
-pfi_vfpca = compute_pfi(x = rf_vfpca_df %>% select(-x1), y = rf_vfpca_df$x1, f = rf_vfpca, K = 10, metric = "nmse")
-pfi_hfpca = compute_pfi(x = rf_hfpca_df %>% select(-x1), y = rf_hfpca_df$x1, f = rf_hfpca, K = 10, metric = "nmse")
+pfi_jfpca <-
+  compute_pfi(
+    x = rf_jfpca_df %>% select(-x1),
+    y = rf_jfpca_df$x1,
+    f = rf_jfpca,
+    K = 10,
+    metric = "nmse"
+  )
+pfi_vfpca <-
+  compute_pfi(
+    x = rf_vfpca_df %>% select(-x1),
+    y = rf_vfpca_df$x1,
+    f = rf_vfpca,
+    K = 10,
+    metric = "nmse"
+  )
+pfi_hfpca <-
+  compute_pfi(
+    x = rf_hfpca_df %>% select(-x1),
+    y = rf_hfpca_df$x1,
+    f = rf_hfpca,
+    K = 10,
+    metric = "nmse"
+  )
 ```
 
 PFI results (mean of reps):
@@ -446,86 +467,3 @@ plot_pc_directions(
   scale_color_manual(values = col_pcdir_2sd) +
   labs(title = "Top PC for Horizontal fPCA")
 ```
-
-# Comparing Centered versus Not-Centered Warping Functions
-
-Apply alignment to jfPCA principal directions:
-
-```{r}
-train_transformed_jfpca_centered = center_warping_funs(train_obj = train_transformed_jfpca)
-```
-
-Warping functions before/after centering:
-
-```{r echo = FALSE}
-data.frame(train_transformed_jfpca$alignment$gam) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "Before Centering") + 
-  theme_bw()
-
-data.frame(train_transformed_jfpca_centered$alignment$gam) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "After Centering") + 
-  theme_bw()
-```
-
-Aligned functions before/after centering:
-
-```{r echo = FALSE}
-data.frame(train_transformed_jfpca$alignment$fn) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "Before Centering") + 
-  theme_bw()
-
-data.frame(train_transformed_jfpca_centered$alignment$fn) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "After Centering") + 
-  theme_bw()
-```
-
-# Comparing Aligned vs Not-Aligned jfPCA PC Directions
-
-Apply alignment to jfPCA principal directions:
-
-```{r}
-jfpca_pcdirs_aligned = align_pcdirs(train_obj = train_transformed_jfpca)
-```
-
-Joint: 
-
-```{r fig.height = 5, fig.width = 18, echo = FALSE}
-plot_pc_directions(
-  fpcs = 1:3,
-  fdasrvf = train_transformed_jfpca$fpca_res,
-  fpca_method = "jfpca",
-  time = times
-) + 
-  scale_color_manual(values = col_pcdir_2sd) + 
-  theme_bw(base_size = 20)
-
-plot_pc_directions(
-  fpcs = 1:3,
-  fdasrvf = jfpca_pcdirs_aligned$fpca_res,
-  fpca_method = "jfpca",
-  time = times
-) + 
-  scale_color_manual(values = col_pcdir_2sd) + 
-  theme_bw(base_size = 20)
-```
-

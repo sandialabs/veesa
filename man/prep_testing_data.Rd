@@ -4,7 +4,7 @@
 \alias{prep_testing_data}
 \title{Align test data and apply fPCA using elastic method applied to training data}
 \usage{
-prep_testing_data(f, time, train_prep, omethod = "DP")
+prep_testing_data(f, time, train_prep, optim_method = "DP")
 }
 \arguments{
 \item{f}{Test data matrix (M x N) of N functions with M samples (already smoothed)}
@@ -13,7 +13,7 @@ prep_testing_data(f, time, train_prep, omethod = "DP")
 
 \item{train_prep}{Object returned from applying "prep_training_data" to training data}
 
-\item{omethod}{Method used for optimization when computing the Karcher mean (DP, DP2, RBFGS, or DPo)}
+\item{optim_method}{Method used for optimization when computing the Karcher mean (DP, DP2, RBFGS, or DPo)}
 }
 \value{
 List containing (varies slightly based on fpca method used): 

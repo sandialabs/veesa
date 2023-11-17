@@ -6,7 +6,7 @@
 #' @param f Test data matrix (M x N) of N functions with M samples (already smoothed)
 #' @param time Vector of size M describing the sample points
 #' @param train_prep Object returned from applying "prep_training_data" to training data
-#' @param omethod Method used for optimization when computing the Karcher mean (DP, DP2, RBFGS, or DPo)
+#' @param optim_method Method used for optimization when computing the Karcher mean (DP, DP2, RBFGS, or DPo)
 #' 
 #' @export prep_testing_data
 #'
@@ -28,7 +28,7 @@
 #'   \item g: test data combination of aligned and shooting functions (jfpca only)
 #' }
 
-prep_testing_data <- function(f, time, train_prep, omethod = "DP") {
+prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
 
   #### Setup -----------------------------------------------------------
 
@@ -67,7 +67,7 @@ prep_testing_data <- function(f, time, train_prep, omethod = "DP") {
       Q1 = q_mean_train,
       T1 = time,
       T2 = time,
-      method = omethod
+      method = optim_method
     )
   
   # 4. Apply warping functions to align test data functions:
