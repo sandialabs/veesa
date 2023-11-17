@@ -110,7 +110,7 @@ test_transformed_jfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_jfpca,
-    optim_method = "DP"
+    optim_method = "DPo"
   )
 
 test_transformed_vfpca <-
@@ -118,7 +118,7 @@ test_transformed_vfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_vfpca,
-    optim_method = "DP"
+    optim_method = "DPo"
   )
 
 test_transformed_hfpca <-
@@ -126,7 +126,7 @@ test_transformed_hfpca <-
     f = sim_test_matrix,
     time = times,
     train_prep = train_transformed_hfpca,
-    optim_method = "DP"
+    optim_method = "DPo"
   )
 ```
 
