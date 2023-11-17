@@ -20,6 +20,7 @@
 #' @importFrom ggplot2 .data aes facet_wrap geom_line ggplot labs scale_linetype_manual scale_size_manual theme_bw
 #' @importFrom purrr map_df
 #' @importFrom stats runif
+#' @importFrom stringr str_replace
 #' @importFrom tidyr pivot_longer
 #' 
 #' @return XXX

@@ -13,8 +13,10 @@ Imports:
   dplyr,
   fdasrvf,
   forcats,
-  foreach,
   ggplot2,
   purrr,
   stats,
+  stringr,
   tidyr
+Remotes: 
+  jdtuck/fdasrvf_R

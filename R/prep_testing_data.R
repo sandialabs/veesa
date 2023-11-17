@@ -10,7 +10,7 @@
 #' 
 #' @export prep_testing_data
 #'
-#' @importFrom fdasrvf f_to_srvf gradient optimum.reparam time_warping warp_f_gamma
+#' @importFrom fdasrvf f_to_srvf gradient inv_exp_map optimum.reparam time_warping warp_f_gamma
 #' @importFrom purrr map map2 pmap
 #' 
 #' @return List containing (varies slightly based on fpca method used): 
@@ -90,7 +90,7 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
     } else {
       mu_psi = rowMeans(matrix(unlist(psi), ncol = ntest, byrow = F)) 
     }
-    nu = purrr::map(.x = psi, .f = fdasrvf:::inv_exp_map, Psi = mu_psi)
+    nu = purrr::map(.x = psi, .f = fdasrvf::inv_exp_map, Psi = mu_psi)
   }
   
   # 2. If applying jfpca or vfpca, obtain id value:

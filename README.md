@@ -82,7 +82,7 @@ train_transformed_jfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "jfpca",
-    optim_method = "DP"
+    optim_method = "DPo"
   )
 
 train_transformed_vfpca <-
@@ -90,7 +90,7 @@ train_transformed_vfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "vfpca",
-    optim_method = "DP"
+    optim_method = "DPo"
   )
 
 train_transformed_hfpca <-
@@ -98,7 +98,7 @@ train_transformed_hfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "hfpca",
-    optim_method = "DP"
+    optim_method = "DPo"
   )
 ```
 

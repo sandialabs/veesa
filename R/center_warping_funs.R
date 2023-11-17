@@ -25,7 +25,7 @@ center_warping_funs <- function(train_obj) {
   mq = aligned$mqn
   
   # Compute gamma inverse
-  gamI = fdasrvf:::SqrtMeanInverse(t(gam))
+  gamI = fdasrvf::SqrtMeanInverse(t(gam))
   gamI_dev = fdasrvf::gradient(gamI, 1/(M-1))
   
   # Apply centering
