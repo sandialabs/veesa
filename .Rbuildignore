@@ -1,5 +1,13 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^CRAN-SUBMISSION$
+^\.github$
+^\src\*.a
+^\src\*.o
+^\src\*.so
+veesa.Rproj
+^.*\.Rproj$
+^revdep$
 CODE_OF_CONDUCT.md
 LICENSE.md
 README.Rmd
