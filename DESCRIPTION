@@ -2,8 +2,10 @@ Package: veesa
 Type: Package
 Title: VEESA Pipeline for Explainable Machine Learning with Functional Data
 Version: 0.1.0
-Author: Katherine Goode, J. Derek Tucker
-Maintainer: Katherine Goode <kjgoode@sandia.gov>
+Date: 2023-11-20
+Authors@R: c(
+    person("Katherine", "Goode", email = "kjgoode@sandia.gov", role = c("aut","cre")),
+    person("J. Derek", "Tucker", email = "jdtuck@sandia.gov", role = "aut"))
 Description: Contains functions that are helpful when applying the VEESA pipeline in R.
 License: MIT + file LICENSE
 Encoding: UTF-8
@@ -11,7 +13,7 @@ LazyData: true
 RoxygenNote: 7.2.3
 Imports:
   dplyr,
-  fdasrvf,
+  fdasrvf (>= 2.1.0),
   forcats,
   ggplot2,
   purrr,

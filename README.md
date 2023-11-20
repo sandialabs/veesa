@@ -1,5 +1,30 @@
 VEESA R Package
 ================
+*R Library for VEESA Pipeline for Explainable Machine Learning with Functional Data*
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/sandialabs/veesa/actions/workflows/r.yml/badge.svg)](https://github.com/sandialabs/veesa/actions/workflows/r.yml)
+[![CRAN status](https://www.r-pkg.org/badges/version/veesa)](https://CRAN.R-project.org/package=veesa)
+<!-- badges: end -->
+
+A R package for explainable machine learning with functional data. Utilizes 
+elastic functional data analysis framework
+
+### Installation
+------------------------------------------------------------------------------
+v0.1.0 will soon be on [CRAN](https://cran.r-project.org/package=veesa)
+and can be installed as
+> `install.packages("veesa")`
+
+1. Download zip or tar.gz of package or clone repository
+2. Install into R (> 4.1.0)
+
+> `install.packages("veesa.tar.gz", repos = NULL)`
+
+------------------------------------------------------------------------------
+
+### References
+<paper soon>
 
 # Set Up
 
