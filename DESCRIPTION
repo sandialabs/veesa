@@ -20,5 +20,3 @@ Imports:
   stats,
   stringr,
   tidyr
-Remotes: 
-  jdtuck/fdasrvf_R
