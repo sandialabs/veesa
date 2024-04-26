@@ -9,7 +9,7 @@
 #' @param train_obj Output object from `prep_training_data` (jfpca only)
 #'
 #' @export align_pcdirs
-#' 
+#'
 #' @return List with the same structure as `prep_training_data`, but 
 #' the principal directions are replaced with the aligned version and gamI is
 #' included in the fpca_res object.
@@ -24,7 +24,7 @@ align_pcdirs <- function(train_obj) {
   
   # Extract and prepare objects based on training data
   aligned = train_obj$alignment
-  gam = t(aligned$gam)
+  gam = t(aligned$warping_functions)
   N = nrow(gam)
   M = ncol(gam)
   mq = aligned$mqn

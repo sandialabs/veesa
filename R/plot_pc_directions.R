@@ -91,7 +91,6 @@ plot_pc_directions <- function(fpcs, fdasrvf, fpca_method, times = NULL, digits 
   plot_df <- fpc_df %>%
     dplyr::left_join(perc_df, by = "fpc") %>%
     dplyr::mutate(fpc_facet = paste0(
-      "Principal Directions for ",
       pc_name,
       " ",
       .data$fpc,

@@ -19,7 +19,7 @@ center_warping_funs <- function(train_obj) {
   # Extract and prepare objects based on training data
   aligned = train_obj$alignment
   time = aligned$time
-  gam = t(aligned$gam)
+  gam = t(aligned$warping_functions)
   N = nrow(gam)
   M = ncol(gam)
   mq = aligned$mqn
@@ -34,7 +34,7 @@ center_warping_funs <- function(train_obj) {
   for (k in 1:N){
     aligned$qn[,k] = approx(time, aligned$qn[,k], xout = time0)$y * sqrt(gamI_dev)
     aligned$fn[,k] = approx(time, aligned$fn[,k], xout = time0)$y
-    aligned$gam[,k] = approx(time, gam[k,], xout = time0)$y
+    aligned$warping_functions[,k] = approx(time, gam[k,], xout = time0)$y
   }
   
   # Return the centered results

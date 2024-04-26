@@ -10,7 +10,7 @@
 #' 
 #' @export prep_testing_data
 #'
-#' @importFrom fdasrvf f_to_srvf gradient inv_exp_map optimum.reparam time_warping warp_f_gamma
+#' @importFrom fdasrvf f_to_srvf gradient optimum.reparam time_warping warp_f_gamma
 #' @importFrom purrr map map2 pmap
 #' 
 #' @return List containing (varies slightly based on fpca method used): 

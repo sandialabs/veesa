@@ -1,30 +1,5 @@
 VEESA R Package
 ================
-*R Library for VEESA Pipeline for Explainable Machine Learning with Functional Data*
-
-<!-- badges: start -->
-[![R-CMD-check](https://github.com/sandialabs/veesa/actions/workflows/r.yml/badge.svg)](https://github.com/sandialabs/veesa/actions/workflows/r.yml)
-[![CRAN status](https://www.r-pkg.org/badges/version/veesa)](https://CRAN.R-project.org/package=veesa)
-<!-- badges: end -->
-
-A R package for explainable machine learning with functional data. Utilizes 
-elastic functional data analysis framework
-
-### Installation
-------------------------------------------------------------------------------
-v0.1.0 will soon be on [CRAN](https://cran.r-project.org/package=veesa)
-and can be installed as
-> `install.packages("veesa")`
-
-1. Download zip or tar.gz of package or clone repository
-2. Install into R (> 4.1.0)
-
-> `install.packages("veesa.tar.gz", repos = NULL)`
-
-------------------------------------------------------------------------------
-
-### References
-<paper soon>
 
 # Set Up
 
@@ -215,30 +190,9 @@ Compute PFI:
 
 ``` r
 set.seed(20211130)
-pfi_jfpca <-
-  compute_pfi(
-    x = rf_jfpca_df %>% select(-x1),
-    y = rf_jfpca_df$x1,
-    f = rf_jfpca,
-    K = 10,
-    metric = "nmse"
-  )
-pfi_vfpca <-
-  compute_pfi(
-    x = rf_vfpca_df %>% select(-x1),
-    y = rf_vfpca_df$x1,
-    f = rf_vfpca,
-    K = 10,
-    metric = "nmse"
-  )
-pfi_hfpca <-
-  compute_pfi(
-    x = rf_hfpca_df %>% select(-x1),
-    y = rf_hfpca_df$x1,
-    f = rf_hfpca,
-    K = 10,
-    metric = "nmse"
-  )
+pfi_jfpca = compute_pfi(x = rf_jfpca_df %>% select(-x1), y = rf_jfpca_df$x1, f = rf_jfpca, K = 10, metric = "nmse")
+pfi_vfpca = compute_pfi(x = rf_vfpca_df %>% select(-x1), y = rf_vfpca_df$x1, f = rf_vfpca, K = 10, metric = "nmse")
+pfi_hfpca = compute_pfi(x = rf_hfpca_df %>% select(-x1), y = rf_hfpca_df$x1, f = rf_hfpca, K = 10, metric = "nmse")
 ```
 
 PFI results (mean of reps):
@@ -277,3 +231,31 @@ top_pc_hfpca <-
 Principal directions of top PC for each jfPCA method:
 
 ![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
+
+# Comparing Centered versus Not-Centered Warping Functions
+
+Apply alignment to jfPCA principal directions:
+
+``` r
+train_transformed_jfpca_centered = center_warping_funs(train_obj = train_transformed_jfpca)
+```
+
+Warping functions before/after centering:
+
+![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-20-2.png)<!-- -->
+
+Aligned functions before/after centering:
+
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
+
+# Comparing Aligned vs Not-Aligned jfPCA PC Directions
+
+Apply alignment to jfPCA principal directions:
+
+``` r
+jfpca_pcdirs_aligned = align_pcdirs(train_obj = train_transformed_jfpca)
+```
+
+Joint:
+
+![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->

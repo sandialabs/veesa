@@ -21,8 +21,7 @@
 #'   \item fpca_res: output from fdasrvf::jointFPCA, fdasrvf::horizFPCA, or fdasrvf::vertFPCA (dependent on fpca_type)
 #' }
 
-prep_training_data <- function(f, time, fpca_method, ci = c(-2, -1, 0, 1, 2), 
-                               optim_method = "DP") {
+prep_training_data <- function(f, time, fpca_method, ci = c(-2, -1, 0, 1, 2), optim_method = "DP") {
 
   # Make sure 'fpca_method' is all lower case
   fpca_method = tolower(fpca_method)
@@ -34,14 +33,7 @@ prep_training_data <- function(f, time, fpca_method, ci = c(-2, -1, 0, 1, 2),
   time = seq(0, 1, length.out = length(time))
 
   # Apply time_warping from fdasrvf to training data
-  aligned <- 
-    fdasrvf::time_warping(
-      f = f, 
-      time = time, 
-      parallel = T, 
-      optim_method = optim_method, 
-      center = F
-    )
+  aligned <- fdasrvf::time_warping(f = f, time = time, parallel = T, optim_method = optim_method, center = F)
 
   # Apply an elastic fPCA to the adjusted aligned training data using fdasrvf
   if (fpca_method == "jfpca") {
