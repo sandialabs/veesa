@@ -24,7 +24,7 @@ prep_training_data(
 \item{optim_method}{Method used for optimization when computing the Karcher mean (DP,DP2,RBFGS,DPo)}
 }
 \value{
-List with three objects: 
+List with three objects:
 \itemize{
   \item alignment: output from fdasrvf::time_warping
   \item fpca_type: type of elastic FPCA method applied
