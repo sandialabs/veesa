@@ -1,10 +1,10 @@
 Package: veesa
 Type: Package
 Title: VEESA Pipeline for Explainable Machine Learning with Functional Data
-Version: 0.1.1
+Version: 0.1.2
 Author: Katherine Goode, J. Derek Tucker
 Maintainer: Katherine Goode <kjgoode@sandia.gov>
-Description: Contains functions that are helpful when applying the VEESA pipeline in R.
+Description: Contains functions for applying the VEESA pipeline in R.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

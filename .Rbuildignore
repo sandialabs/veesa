@@ -14,3 +14,5 @@ README.Rmd
 README_files
 .github
 cran-comments.md
+^inst
+^demos
