@@ -1,0 +1,1849 @@
+## ----setup, include = FALSE----------------------------------------------------------------------------------------------------------
+
+# R markdown options
+knitr::opts_chunk$set(
+   echo = FALSE, 
+   message = FALSE,
+   fig.align = "center",
+   dpi = 600, 
+   warning = FALSE,
+   error = FALSE
+)
+
+# More options for R markdown
+knitr::opts_knit$set(eval.after = "fig.cap")
+
+# Load packages
+library(cowplot)
+library(dplyr)
+library(fdasrvf)
+library(forcats)
+library(ggplot2)
+library(kableExtra)
+library(latex2exp)
+library(purrr)
+library(randomForest)
+library(reticulate)
+library(stringr)
+library(tidyr)
+library(veesa)
+library(wesanderson)
+
+# Specify the conda environment to use - create environment using veesa_env.yml
+use_condaenv(condaenv = "veesa", required = T)
+
+# Specify colors for groups
+col_2groups = wes_palettes$Royal1[2:1]
+col_3groups = wes_palettes$Royal1[c(1,3,2)]
+col_4groups = wes_palette(name = "Royal1", n = 20, type = "continuous")[c(1,2,4,7)]
+col_5groups = wes_palette(name = "Royal1", n = 5, type = "continuous")[c(1,2,3,5,4)]
+
+# Specify some high/low colors for contrast throughout
+col_low = wes_palette(name = "Royal1", n = 30, type = "continuous")[4]
+col_high = wes_palette(name = "Royal1", n = 30, type = "continuous")[29]
+
+# Specify colors for PC direction plots
+col_plus1 = "#784D8C"
+col_plus2 = "#A289AE"
+col_plus3 = "#CAC0D2"
+col_minus1 = "#EA9B44"
+col_minus2 = "#EBBC88"
+col_minus3 = "#F3DABC"
+col_pcdir_1sd = c(col_plus1, "black", col_minus1)
+col_pcdir_2sd = c(col_plus2, col_plus1, "black", col_minus1, col_minus2)
+col_pcdir_3sd = c(col_plus3, col_plus2, col_plus1, "black", col_minus1, col_minus2, col_minus3)
+
+# Specify inkjet colors
+col_inkjet = c("#0EB4AD", "#8f1883", "#d9c004")
+
+# Specify the (base) font size (ch2_fs) and font (ff) for all plots
+fs = 8
+ff = "Helvetica"
+
+# Specify a file path
+fp = "~/OneDrive - Sandia National Laboratories/Documents/projects/veesa/"  #kjgoode
+#fp = "~/OneDrive - Sandia National Laboratories/veesa/"  #jdtuck
+#fp = "~/veesa/"
+
+
+
+## # Load python packages
+## import fdasrsf as fs
+## from code import hct_functions as hct
+## import numpy as np
+## import os
+## import pandas as pd
+## import pickle
+## 
+## # Load functions from python packages
+## from functools import reduce
+## from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+## from sklearn.inspection import permutation_importance
+## from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score
+## from sklearn.model_selection import train_test_split
+## from sklearn.neural_network import MLPClassifier, MLPRegressor
+
+## ----sim-data------------------------------------------------------------------------------------------------------------------------
+# Specify parameters
+z1 = 1; z1_sd = 0.05; a1 = -3; a1_sd = 1
+z2 = 1.25; z2_sd = 0.05; a2 = 3; a2_sd = 1
+
+# Specify the times
+sim_times = seq(-15, 15, length.out = 150)
+
+# Function for simulating data
+sim_data = function(id, group, t) {
+  if (group == 1) {
+    z = rnorm(1, z1, z1_sd)
+    a = rnorm(1, a1, a1_sd)
+  }
+  if (group == 2) { 
+    z = rnorm(1, z2, z2_sd)
+    a = rnorm(1, a2, a2_sd)
+  }
+  y = z * exp((-((t - a)^2)) / 2)
+  
+  data.frame(id, group = as.character(group), index = 1:length(t), t, y)
+}
+
+# Function for generating true means
+true_mean = function(group, t) {
+  if (group == 1) {
+   z = z1
+   a = a1 
+  }
+  if (group == 2) {
+    z = z2
+    a = a2
+  }
+  y = z * exp((-((t - a)^2)) / 2)
+  data.frame(group = as.character(group), index = 1:length(t), t, y)
+}
+
+# Specify the sample sizes
+sim_ntrain = 400
+sim_ntest = 100
+sim_n = sim_ntrain + sim_ntest
+
+# Specify a file path for simulated data
+sim_data_fp = paste0(fp, "data/sim/sim-data.csv")
+
+# Generate the data
+if (file.exists(sim_data_fp)) {
+  
+  # Load data files if already generated
+  sim_data = read.csv(sim_data_fp) |> mutate(group = factor(group))
+
+} else {
+  
+  # Simulate data
+  set.seed(20211027)
+  sim_data <-
+    map2_df(
+      .x = 1:sim_n,
+      .y = c(rep(1:2, each = sim_n / 2)),
+      .f = sim_data,
+      t = sim_times
+    )
+  
+  # Randomly select ids from the simulated data for the training data
+  sim_train_ids = sample(unique(sim_data$id), sim_ntrain, F)
+  
+  # Add training/testing variable
+  sim_data <- 
+    sim_data |>
+    mutate(data = ifelse(id %in% sim_train_ids, "Training", "Testing")) |>
+    select(data, id, group, everything()) |>
+    mutate(data = forcats::fct_relevel(data, "Training", "Testing")) |>
+    mutate(group = factor(group))
+
+  # Save the simulated data
+   write.csv(sim_data, sim_data_fp, row.names = FALSE)
+  
+}
+
+
+## ----sim-train-test------------------------------------------------------------------------------------------------------------------
+# Create long versions of training/testing data sets
+sim_train_long = sim_data |> filter(data == "Training")
+sim_test_long = sim_data |> filter(data == "Testing")
+
+# Create wide versions of training data set
+sim_train_wide <- 
+  sim_train_long |>
+  select(-t) |>
+  mutate(index = paste0("t", index)) |>
+  pivot_wider(names_from = index, values_from = y)
+
+# Create wide versions of testing data set
+sim_test_wide <- 
+  sim_test_long |>
+  select(-t) |>
+  mutate(index = paste0("t", index)) |>
+  pivot_wider(names_from = index, values_from = y)
+
+# Convert training data to matrix (N x M) of M functions with N samples
+sim_train_matrix <-
+  sim_train_wide |>
+  select(-data, -id, -group) |> 
+  as.matrix() |> 
+  t()
+
+# Convert testing data to matrix (N x M) of M functions with N samples
+sim_test_matrix <-
+  sim_test_wide |>
+  select(-data,-id,-group) |>
+  as.matrix() |>
+  t()
+
+
+## ----sim-align-jfpca-----------------------------------------------------------------------------------------------------------------
+# Align the training data functions and apply jfPCA
+sim_train_esa_fp = paste0(fp, "data/sim/sim-train-esa.rds")
+if (file.exists(sim_train_esa_fp)) {
+  sim_train_esa = readRDS(sim_train_esa_fp)
+} else {
+  sim_train_esa <- veesa::prep_training_data(
+    f = sim_train_matrix, 
+    time = sim_times, 
+    omethod = "DPo", 
+    fpca_method = "jfpca"
+  )
+  saveRDS(sim_train_esa, sim_train_esa_fp)
+}
+
+# Align the testing data functions and apply jfPCA based
+# on training data application
+sim_test_esa_fp = paste0(fp, "data/sim/sim-test-esa.rds")
+if (file.exists(sim_test_esa_fp)) {
+  sim_test_esa = readRDS(sim_test_esa_fp)
+} else {
+  sim_test_esa <- veesa::prep_testing_data(
+    f = sim_test_matrix,
+    time = sim_times,
+    train_prep = sim_train_esa,
+    omethod = "DPo"
+  )
+  saveRDS(sim_test_esa, sim_test_esa_fp)
+}
+
+# Center warping and aligned functions
+sim_centered_fp = paste0(fp, "data/sim/sim-jfpca-aligned.rds")
+if (file.exists(sim_centered_fp)) {
+  sim_centered = readRDS(sim_centered_fp)
+} else {
+  sim_centered = center_warping_funs(train_obj = sim_train_esa)
+  saveRDS(sim_centered, sim_centered_fp)
+}
+
+# Obtain aligned PC directions
+sim_jfpca_aligned_fp = paste0(fp, "data/sim/sim-jfpca-aligned.rds")
+if (file.exists(sim_jfpca_aligned_fp)) {
+  sim_jfpca_aligned = readRDS(sim_jfpca_aligned_fp)
+} else {
+  sim_jfpca_aligned = align_pcdirs(train_obj = sim_train_esa)
+  saveRDS(sim_jfpca_aligned, sim_jfpca_aligned_fp)
+}
+
+
+## ----fig1, fig.width = 22, fig.height = 10, out.width = '5in', fig.cap = "(Top Left) Training data functions from the shifted peak simulated data. (Top Right) The true, cross-sectional, and aligned functional means. (Bottom Left) The aligned functions. (Bottom Right) The warping functions from the alignment of the functions."----
+
+# Specify the figure font size
+f1_fs = 22
+
+# Specify an aspect ratio for all plots relating to the sim data
+sim_ar = 0.5
+
+# Extract the aligned functions
+colnames(sim_centered$alignment$fn) = unique(sim_train_long$id)
+sim_aligned_funs <-
+  data.frame(sim_centered$alignment$fn) |>
+  mutate(t = sim_times) |>
+  pivot_longer(cols = -t, names_to = "id", values_to = "y_aligned") |>
+  mutate(id = as.integer(str_remove(id, "X"))) |>
+  right_join(sim_train_long |> select(id, group) |> distinct() |> mutate(group = as.character(group)), by = "id") |>
+  select(id, group, t, y_aligned)
+
+# True functional means
+sim_true_means <- 
+  bind_rows(true_mean(1, sim_times), true_mean(2, sim_times)) |> 
+  select(-index) |>
+  mutate(group = factor(group, levels = c("1", "2")), t = round(t,2)) |>
+  rename(mean_true = y)
+
+# Compute cross-sectional mean of the observed functions
+sim_cs_means <- 
+  sim_train_long |>
+  group_by(t, group) |>
+  summarise(mean_cs = mean(y), .groups = "drop") |>
+  mutate(t = round(t,2)) |>
+  arrange(group)
+
+# Compute cross-sectional mean of the aligned functions
+sim_aligned_means <- 
+  sim_aligned_funs |>
+  group_by(t, group) |>
+  summarise(
+    mean_aligned = mean(y_aligned),
+    .groups = "drop"
+  ) |>
+  mutate(group = factor(group, levels = c("1", "2")), t = round(t,2)) |>
+  arrange(group)
+
+# Plot the data
+plot_sim_data <-
+  ggplot(sim_train_long, aes(x = t, y = y, color = group, group = id)) +
+  geom_line(alpha = 0.35) +
+  labs(
+    title = paste0("Simulated functions"),
+    x = TeX('$t$'),
+    y = TeX('$y$')
+  ) +
+  scale_color_manual(values = col_2groups) +
+  theme_bw(base_family = ff, base_size = f1_fs) +
+  theme(
+    legend.position = "none", 
+    aspect.ratio = sim_ar,
+    axis.title = element_text(size = f1_fs), 
+    axis.text = element_text(size = f1_fs), 
+    title = element_text(size = f1_fs)
+  ) + 
+  ylim(0, 1.4)
+
+# Plot the means
+plot_sim_means <- 
+  full_join(sim_true_means, sim_cs_means, by = c("group", "t")) |>
+  full_join(sim_aligned_means, by = c("group", "t")) |>
+  pivot_longer(names_to = "mean", cols = mean_true:mean_aligned) |>
+  mutate(mean = fct_recode(factor(mean), "True" = "mean_true", "Cross-Sectional" = "mean_cs", "Aligned" = "mean_aligned")) |>
+  mutate(mean = fct_relevel(mean, "True", "Cross-Sectional", "Aligned")) |>
+  ggplot(aes(x = t, y = value, group = factor(mean):factor(group), color = group, linetype = mean)) +
+  geom_line(aes(size = mean)) + 
+  labs(
+    title = "Functional means", 
+    y = "y",
+    x = TeX('$t$'),
+    color = "Group",
+    fill = "Group",
+    linetype = "Mean Type",
+    size = "Mean Type"
+  ) +
+  scale_color_manual(values = col_2groups) +
+  scale_fill_manual(values = col_2groups) +
+  scale_size_manual(values = c(1.5, 0.75, 0.75)) +
+  scale_linetype_manual(values = c("solid", "dotted", "longdash")) +
+  theme_bw(base_family = ff, base_size = f1_fs) +
+  theme(
+    #legend.position = "bottom", 
+    aspect.ratio = sim_ar,
+    axis.title = element_text(size = f1_fs), 
+    axis.text = element_text(size = f1_fs),
+    title = element_text(size = f1_fs),
+    legend.text = element_text(size = f1_fs*1.1),
+    legend.title = element_text(size = f1_fs*1.1)
+  ) +
+  ylim(0, 1.4) + 
+  guides(
+    color = guide_legend(override.aes = list(linewidth = 1.25, alpha = 1))
+  )
+
+# Plot the aligned functions
+plot_sim_data_aligned <-
+  sim_aligned_funs |>
+  ggplot(aes(x = t, y = y_aligned, group = id, color = group)) +
+  geom_line(alpha = 0.35) +
+  labs(
+    title = "Aligned simulated functions",
+    x = TeX('$t$'),
+    y = "y"
+  ) +
+  scale_color_manual(values = col_2groups) +
+  theme_bw(base_family = ff, base_size = f1_fs) +
+  theme(
+    legend.position = "none", 
+    aspect.ratio = sim_ar,
+    axis.title = element_text(size = f1_fs), 
+    axis.text = element_text(size = f1_fs), 
+    title = element_text(size = f1_fs)
+  ) + 
+  ylim(0, 1.4)
+
+# Plot the warping functions
+plot_sim_warping_funs <-
+  sim_centered$alignment$gam |>
+  t() |>
+  data.frame() |>
+  mutate(id = 1:n()) |>
+  pivot_longer(cols = -id, names_to = "index", values_to = "w") |>
+  bind_cols(sim_train_long |> select(group, t)) |>
+  ggplot(aes(x = t, y = w, group = id, color = group)) +
+  geom_line(alpha = 0.35) +
+  scale_color_manual(values = col_2groups) +
+  theme_bw(base_family = ff, base_size = f1_fs) +
+  theme(
+    legend.position = "none", 
+    aspect.ratio = sim_ar,
+    axis.title = element_text(size = f1_fs), 
+    axis.text = element_text(size = f1_fs), 
+    title = element_text(size = f1_fs)
+  ) + 
+  labs(
+    x = TeX("$t$"),
+    y = "Warping function",
+    title = "Warping functions of simulated functions"
+  )
+
+# Extract the legend
+legend <- 
+  get_plot_component(
+    plot_sim_means, 
+    'guide-box-right', 
+    return_all = TRUE
+  )
+plot_sim_means <- plot_sim_means + theme(legend.position = "none")
+
+# Join the plots
+plot_grid(
+  plot_grid(
+    plot_sim_data,
+    plot_sim_means,
+    plot_sim_data_aligned,
+    plot_sim_warping_funs,
+    ncol = 2,
+    label_fontfamily = ff,
+    label_size = f1_fs
+  ),
+  legend,
+  ncol = 2,
+  rel_widths = c(0.85,0.15)
+)
+
+
+## ----fig2, fig.width = 6, fig.height = 3, out.width = '4in', fig.cap = "Plot of the principal directions for interpreting the functional variability captured by jfPC 1 from the shifted peaks data shown in Figure \\ref{fig:fig1}."----
+
+# Specify the figure font size
+f2_fs = 10
+
+# Create figure
+plot_pc_directions(
+  fpc = 1,
+  fdasrvf = sim_jfpca_aligned$fpca_res,
+  fpca_method = "jfpca",
+  times = -sim_times, 
+  linesizes = rep(0.75,5),
+  alpha = 0.9
+) +
+  theme_bw(base_family = ff, base_size = f2_fs) +
+  theme(
+    strip.background = element_rect(color = "white", fill = "white"),
+    legend.key.width = unit(1,"cm"),
+    aspect.ratio = sim_ar,
+    axis.title = element_text(size = f2_fs), 
+    axis.text = element_text(size = f2_fs), 
+    title = element_text(size = f2_fs),
+    strip.text = element_text(size = f2_fs)
+  ) +
+  scale_color_manual(values = col_pcdir_2sd) +
+  labs(x = TeX('$t$'), y = TeX('$y_g(t)$')) + 
+  guides(
+    color = guide_legend(reverse = TRUE),
+    linetype = guide_legend(reverse = TRUE),
+    size = guide_legend(reverse = TRUE)
+  )
+
+
+## ----sim-model-----------------------------------------------------------------------------------------------------------------------
+# Prepare data for model
+sim_train_model_data <- 
+  sim_train_esa$fpca_res$coef |> 
+  data.frame() |> 
+  mutate(group = factor(sim_train_wide$group))
+sim_test_model_data <- 
+  t(sim_test_esa$coef) |> 
+  data.frame() |> 
+  mutate(group = factor(sim_test_wide$group))
+
+# Random forest on jfPCA with aligned data
+sim_rf_jfpca_fp = paste0(fp, "results/sim/sim-rf-jfpca.rds")
+if (file.exists(sim_rf_jfpca_fp)) {
+  sim_rf_jfpca = readRDS(sim_rf_jfpca_fp)
+} else {   
+  set.seed(20210301)
+  sim_rf_jfpca <-
+    randomForest::randomForest(
+      formula = group ~ .,
+      data = sim_train_model_data,
+      importance = TRUE)
+  saveRDS(sim_rf_jfpca, sim_rf_jfpca_fp)
+}
+
+# Compute the model predictions on the test data
+sim_train_pred_jfpca = predict(sim_rf_jfpca, sim_train_model_data |> select(-group))
+sim_test_pred_jfpca = predict(sim_rf_jfpca, sim_test_model_data |> select(-group))
+
+# Compute the accuracy on the training data
+sim_train_acc_jfpca = sum(sim_train_pred_jfpca == sim_train_model_data$group) / sim_ntrain
+sim_test_acc_jfpca = sum(sim_test_pred_jfpca == sim_test_model_data$group) / sim_ntest
+
+
+## ----sim-pfi-------------------------------------------------------------------------------------------------------------------------
+# Specify the number of replications used to compute PFI with the example data
+sim_K = 10
+
+# Compute PFI using accuracy with the VEESA pipeline (training data)
+sim_pfi_acc_jfpca_fp = paste0(fp, "results/sim/sim-pfi-acc-jfpca.rds")
+if (file.exists(sim_pfi_acc_jfpca_fp)) {
+  sim_pfi_acc_jfpca = readRDS(sim_pfi_acc_jfpca_fp)
+} else {
+  set.seed(20210921)
+  sim_pfi_acc_jfpca <-
+    compute_pfi(
+      x = sim_train_model_data |> select(-group),
+      y = sim_train_model_data$group,
+      f = sim_rf_jfpca,
+      K = sim_K,
+      metric = "accuracy"
+    )
+  saveRDS(sim_pfi_acc_jfpca, sim_pfi_acc_jfpca_fp)
+}
+
+# Compute PFI using accuracy with the VEESA pipeline (testing data)
+sim_pfi_acc_jfpca_test_fp = paste0(fp, "results/sim/sim-pfi-acc-jfpca-test.rds")
+if (file.exists(sim_pfi_acc_jfpca_test_fp)) {
+  sim_pfi_acc_jfpca_test = readRDS(sim_pfi_acc_jfpca_test_fp)
+} else {
+  set.seed(20210921)
+  sim_pfi_acc_jfpca_test <-
+    compute_pfi(
+      x = sim_test_model_data |> select(-group),
+      y = sim_test_model_data$group,
+      f = sim_rf_jfpca,
+      K = sim_K,
+      metric = "accuracy"
+    )
+  saveRDS(sim_pfi_acc_jfpca_test, sim_pfi_acc_jfpca_test_fp)
+}
+
+# Put pfi and proportion of variation in a data frame
+sim_prop_var_pfi <-
+  data.frame(
+    fpc = 1:length(sim_times),
+    prop_var = (sim_train_esa$fpca_res$latent) ^ 2 / 
+      sum((sim_train_esa$fpca_res$latent) ^ 2),
+    pfi_train = sim_pfi_acc_jfpca$pfi,
+    pfi_test = sim_pfi_acc_jfpca_test$pfi
+  )
+
+# Extract the jfPC with the highest PFI
+sim_train_top_fpc = sim_prop_var_pfi |> filter(pfi_train == max(pfi_train)) |> pull(fpc)
+sim_train_top_pfi = sim_prop_var_pfi |> filter(pfi_train == max(pfi_train)) |> pull(pfi_train)
+sim_test_top_fpc = sim_prop_var_pfi |> filter(pfi_test == max(pfi_test)) |> pull(fpc)
+sim_test_top_pfi = sim_prop_var_pfi |> filter(pfi_test == max(pfi_test)) |> pull(pfi_test)
+
+# Put PFI reps in a data frame
+sim_prop_var_pfi_reps <-
+  data.frame(
+    fpc = 1:length(sim_times),
+    pfi_train = t(sim_pfi_acc_jfpca$pfi_single_reps),
+    pfi_test = t(sim_pfi_acc_jfpca_test$pfi_single_reps)
+  )
+
+
+## ----fig3, fig.width = 8, fig.height = 5, out.width = '4.25in', fig.cap = paste("(Top) Proportion of variation explained by the jfPCs computed from the shifted peaks data. (Middle) Boxplots of PFI values across replicates associated with each jfPC from the shifted peaks data random forest computed on the training data. The blue diamonds represent the PFI value averaged over replicates. (Bottom) Same as middle plot but computed on the shifted peaks test data.")----
+
+# Specify the figure font size
+f3_fs = 13
+
+sim_prop_var_pfi_single_long <- 
+  sim_prop_var_pfi |>
+  pivot_longer(cols = -fpc, names_to = "variable", values_to = "single") |>
+  separate(variable, into = c("variable", "number"), sep = "\\.") |>
+  select(-number)
+
+sim_prop_var_pfi_reps_long <- 
+  sim_prop_var_pfi_reps |>
+  pivot_longer(cols = -fpc, names_to = "variable", values_to = "reps") |>
+  separate(variable, into = c("variable", "number"), sep = "\\.") |>
+  select(-number)
+
+sim_prop_var_pfi_long  <-
+  full_join(
+    sim_prop_var_pfi_single_long,
+    sim_prop_var_pfi_reps_long,
+    by = join_by(fpc, variable)
+  ) |>
+  mutate(
+    variable = fct_relevel(variable, "prop_var", "pfi_train", "pfi_test"),
+    variable = fct_recode(
+      variable,
+      "Proportion of \nvariation" = "prop_var",
+      "PFI (training)" = "pfi_train",
+      "PFI (testing)" = "pfi_test"
+    )
+  )
+
+ggplot(sim_prop_var_pfi_long |> filter(fpc < 50)) +
+  geom_boxplot(
+    aes(x = fpc, y = reps, group = fpc)
+  ) +
+  geom_point(
+    aes(x = fpc, y = single),
+    size = 2.5,
+    shape = 18,
+    color = "steelblue"
+  ) +
+  facet_grid(variable ~ ., scales = "free_y", switch = "y") +
+  labs(x = "jfPC") +
+  theme_bw(base_family = ff, base_size = f3_fs) +
+  theme(
+    strip.placement = "outside",
+    strip.background = element_rect(color = "white", fill = "white"),
+    axis.title.y = element_blank(),
+    axis.title.x = element_text(size = f3_fs),
+    axis.text = element_text(size = f3_fs),
+    title = element_text(size = f3_fs),
+    strip.text = element_text(size = f3_fs)
+  )
+
+
+
+
+## ----fig4, fig.width = 6, fig.height = 3, out.width = '4in', fig.cap = "Plot of the principal directions for interpreting the functional variability captured by jfPC 2 from the shifted peaks data shown in Figure \\ref{fig:fig1}."----
+
+# Specify the figure font size
+f4_fs = 10
+
+# Create figure
+plot_pc_directions(
+  fpc = 2,
+  fdasrvf = sim_jfpca_aligned$fpca_res,
+  fpca_method = "jfpca",
+  times = -sim_times, 
+  linesizes = rep(0.75,5),
+  alpha = 0.9
+) +
+  theme_bw(base_family = ff, base_size = f4_fs) +
+  theme(
+    strip.background = element_rect(color = "white", fill = "white"),
+    legend.key.width = unit(1,"cm"),
+    aspect.ratio = sim_ar,
+    axis.title = element_text(size = f4_fs), 
+    axis.text = element_text(size = f4_fs), 
+    title = element_text(size = f4_fs),
+    strip.text = element_text(size = f4_fs)
+  ) +
+  scale_color_manual(values = col_pcdir_2sd) +
+  labs(x = TeX('$t$'), y = TeX('$y_g(t)$')) + 
+  guides(
+    color = guide_legend(reverse = TRUE),
+    linetype = guide_legend(reverse = TRUE),
+    size = guide_legend(reverse = TRUE)
+  )
+
+
+## ----hct-data------------------------------------------------------------------------------------------------------------------------
+# Train/Test data dimensions 
+hct_train_dims = py_load_object(paste0(fp, "data/hct/hct-train-dims.pkl"))
+hct_test_dims = py_load_object(paste0(fp, "data/hct/hct-test-dims.pkl"))
+hct_total_dims = list()
+hct_total_dims$full = hct_train_dims$train + hct_test_dims$test
+hct_total_dims$h2o = hct_train_dims$h2o + hct_test_dims$h2o
+hct_total_dims$exp = hct_train_dims$exp + hct_test_dims$exp
+hct_total_dims$hp100 = hct_train_dims$hp100 + hct_test_dims$hp100
+hct_total_dims$hp50 = hct_train_dims$hp50 + hct_test_dims$hp50
+hct_total_dims$hp10 = hct_train_dims$hp10 + hct_test_dims$hp10
+
+# Load subset of training data
+hct_train_sub = py_load_object(paste0(fp, "data/hct/hct-sub-train.pkl"))
+
+
+## 
+## ## -----------------------------------------------------------------------------
+## ##
+## ## THE ANALYSIS FOR THE H-CT DATA WAS TOO COMPUTATIONALLY INTENSIVE TO RUN IN
+## ## R MARKDOWN. INSTEAD, IT WAS RUN USING PYTHON CODE ON A LARGER COMPUTER. THE
+## ## PYTHON SCRIPTS USED FOR THIS ANALYSIS CAN BE FOUND IN THE FOLDER ./code. THE
+## ## FILES CONTAIN -hct- IN THE NAME, AND THE NUMBER AT THE BEGINNING OF THE FILE
+## ## NAME INDICATE THE ORDER IN WHICH THE FILES SHOULD BE RUN.
+## ##
+## ## -----------------------------------------------------------------------------
+## 
+
+## ----hct-load-res--------------------------------------------------------------------------------------------------------------------
+# Aligned/warped training data
+hct_train_align_sub = py_load_object(paste0(fp, "data/hct/hct-sub-train-aligned-centered-sparam15.pkl"))
+hct_train_warp_fun_sub = py_load_object(paste0(fp, "data/hct/hct-sub-train-warping-centered-sparam15.pkl"))
+
+# Principal components from training data
+hct_train_jfpca_pcs = py_load_object(paste0(fp, "data/hct/hct-train-jfpca-centered-pc-dirs-sparam15.pkl"))
+hct_train_vfpca_pcs = py_load_object(paste0(fp, "data/hct/hct-train-vfpca-pc-dirs-sparam15.pkl"))
+
+# Latent values from training data
+hct_train_jfpca_latent = py_load_object(paste0(fp, "data/hct/hct-train-jfpca-latent-sparam15.pkl"))
+hct_train_vfpca_latent = py_load_object(paste0(fp, "data/hct/hct-train-vfpca-latent-sparam15.pkl"))
+
+# Model metrics
+hct_jfpca_pred_metrics_train = py_load_object(paste0(fp, "results/hct/hct-train-pred-and-metrics-jfpca-sparam15.pkl"))
+hct_jfpca_pred_metrics_test = py_load_object(paste0(fp, "results/hct/hct-test-pred-and-metrics-jfpca-sparam15.pkl"))
+hct_vfpca_pred_metrics_train = py_load_object(paste0(fp, "results/hct/hct-train-pred-and-metrics-vfpca-sparam15.pkl"))
+hct_vfpca_pred_metrics_test = py_load_object(paste0(fp, "results/hct/hct-test-pred-and-metrics-vfpca-sparam15.pkl"))
+
+# PFI
+hct_jfpca_nn_pfi = py_load_object(paste0(fp, "results/hct/hct-test-pfi-jfpca-sparam15.pkl"))
+hct_vfpca_nn_pfi = py_load_object(paste0(fp, "results/hct/hct-test-pfi-vfpca-sparam15.pkl"))
+
+
+## ----hct-prep-data-------------------------------------------------------------------------------------------------------------------
+# Create long version of aligned data subset
+hct_train_align_sub_long <-
+  hct_train_align_sub |>
+  pivot_longer(cols = -id, names_to = "frequency", values_to = "aligned") |>
+  mutate(frequency = as.integer(frequency))
+
+# Create long version of warping function subset
+hct_train_warp_fun_sub_long <-
+  hct_train_warp_fun_sub |>
+  pivot_longer(cols = -id, names_to = "frequency", values_to = "warping") |>
+  mutate(frequency = as.integer(frequency))
+
+# Join aligned and warping functions with training data
+hct_train_sub$frequency = unlist(hct_train_sub$frequency)
+hct_train_sub_full <-
+  hct_train_sub |>
+  left_join(hct_train_align_sub_long, by = c("id", "frequency")) |>
+  left_join(hct_train_warp_fun_sub_long, by = c("id", "frequency")) |>
+  mutate(material = fct_relevel(material, "explosive", "h2o", "hp10", "hp50", "hp100"))
+
+
+## ----hct-calculations----------------------------------------------------------------------------------------------------------------
+# Compute the number of observations per material subset
+n_obs_sub <-
+  hct_train_sub |>
+  select(material, id) |>
+  distinct() |>
+  count(material)
+
+# Print a message if the subsets have different sizes
+if (sum(n_obs_sub$n[1] != n_obs_sub$n) != 0) {
+  print("Error: H-CT subsets have different sizes")
+}
+
+# Compute cross-sectional means from aligned functions
+hct_train_sub_means <-
+  hct_train_sub_full |>
+  group_by(material, frequency_norm) |>
+  summarise(mean = mean(aligned), .groups = "drop") |>
+  mutate(material = fct_relevel(factor(material), "explosive", "h2o", "hp10", "hp50", "hp100")) |>
+  mutate(
+    material = fct_recode(
+      material,
+      "Explosive" = "explosive",
+      "H2O" = "h2o",
+      "H2O2 (10%)" = "hp10",
+      "H2O2 (50%)" = "hp50",
+      "H2O2 (100%)" = "hp100"
+    )
+  )
+
+# Function for computing warping functions mean using fdasrvf
+get_warp_mean <- function(m, df) {
+
+  # Subset for specified material and put in matrix
+  warp_mat <-
+    df |>
+    filter(material == m) |>
+    select(id, frequency, warping) |>
+    pivot_wider(id_cols = id,
+                names_from = frequency,
+                values_from = warping) |>
+    select(-id) |>
+    as.matrix() |>
+    t()
+
+  # Apply sqrt mean function
+  res = SqrtMean(gam = warp_mat)
+
+  # Extract warping function mean and put in df
+  warp_mean = data.frame(var = res$gam_mu)
+  colnames(warp_mean) = m
+
+  # Return warping mean df
+  warp_mean
+
+}
+
+# Compute the warping functions means from the subset for each material
+hct_warp_means_sub <-
+  map_dfc(
+    .x = c("h2o", "explosive", "hp100", "hp50", "hp10"),
+    .f = get_warp_mean,
+    df = hct_train_sub_full
+  ) |>
+  mutate(frequency_norm = sort(unique(hct_train_sub_full$frequency_norm))) |>
+  pivot_longer(
+    cols = -frequency_norm,
+    names_to = "material",
+    values_to = "warp_mean"
+  ) |>
+  mutate(material = fct_relevel(factor(material), "explosive", "h2o", "hp10", "hp50", "hp100")) |>
+  mutate(
+    material = fct_recode(
+      material,
+      "Explosive" = "explosive",
+      "H2O" = "h2o",
+      "H2O2 (10%)" = "hp10",
+      "H2O2 (50%)" = "hp50",
+      "H2O2 (100%)" = "hp100"
+    )
+  )
+
+# Compute the proportion of variation
+hct_prop_var_jfpca <-
+  data.frame(latent = hct_train_jfpca_latent) |>
+  mutate(index = 1:n(),
+         prop_var = (latent^2) / (sum(latent^2)))
+hct_prop_var_vfpca <-
+  data.frame(latent = hct_train_vfpca_latent) |>
+  mutate(index = 1:n(),
+         prop_var = (latent^2) / (sum(latent^2)))
+
+# Function for identifying a certain number of top jfPCs
+get_top_vars <- function(pfi, nvars) {
+  data.frame(pfi_mean = pfi$importances_mean) |>
+    mutate(x = 1:n()) |>
+    arrange(desc(pfi_mean)) |>
+    slice(1:nvars) |>
+    pull(x)
+}
+
+# Specify number of top fPCs to consider 
+hct_n_top_pcs = 6
+
+# Identify the top fPCs
+hct_top_jfpcs = get_top_vars(pfi = hct_jfpca_nn_pfi, nvars = hct_n_top_pcs)
+hct_top_vfpcs = get_top_vars(pfi = hct_vfpca_nn_pfi, nvars = hct_n_top_pcs)
+
+
+
+## ----fig5, fig.height = 7, fig.width = 14, out.width = "5.5in", fig.cap = "Observed (top row), smoothed and aligned (middle row), and warping functions (bottom row) of a subset of 1,000 H-CT signatures for each material."----
+
+# Specify the figure font size
+f5_fs = 16
+
+# Plot subset of signatures
+hct_train_sub_full |>
+  rename("Observed \nFunctions" = "value",
+         "Smoothed and \nAligned Functions" = "aligned", 
+         "Warping \nFunctions" = "warping") |>
+  pivot_longer(
+    cols = c("Observed \nFunctions", "Smoothed and \nAligned Functions", "Warping \nFunctions"),
+    names_to = "situation"
+  ) |>
+  mutate(situation = fct_relevel(
+    situation,
+    "Observed \nFunctions",
+    "Smoothed and \nAligned Functions",
+    "Warping \nFunctions"
+  )) |>
+  mutate(
+    material = fct_recode(
+      material,
+      "Explosive" = "explosive",
+      "H2O" = "h2o",
+      "H2O2 (10%)" = "hp10",
+      "H2O2 (50%)" = "hp50",
+      "H2O2 (100%)" = "hp100"
+    )
+  ) |>
+  ggplot(aes(
+    x = frequency_norm,
+    y = value,
+    group = id,
+    color = material
+  )) +
+  geom_line(alpha = 0.1, size = 0.1) +
+  facet_grid(situation ~ material, scales = "free_y") +
+  theme_bw(base_family = ff, base_size = f5_fs) +
+  theme(
+    legend.key.width = unit(1, "cm"),
+    strip.background = element_rect(color = "white", fill = "white"),
+    aspect.ratio = 0.75,
+    legend.position = "none",
+    axis.title = element_text(size = f5_fs), 
+    axis.text = element_text(size = f5_fs*0.7), 
+    title = element_text(size = f5_fs),
+    strip.text = element_text(size = f5_fs)
+  ) +
+  scale_color_manual(values = col_5groups) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 0.5))) +
+  labs(color = "Material", y = "Intensity", x = "Normalized Frequency")
+
+
+
+## ----fig6, fig.width = 17, fig.height = 5.5, out.width = "5in", fig.cap = "(Left) Cross-sectional functional means of the aligned functions in Figure \\ref{fig:fig5} for each material. (Right) Karcher means of the warping functions within each material."----
+
+# Specify the figure font size
+f6_fs = 18
+
+plot_hct_train_means <-
+  hct_train_sub_means |>
+  ggplot(aes(x = frequency_norm, y = mean, color = material)) +
+  geom_line(size = 1) +
+  theme_bw(base_family = ff, base_size = f6_fs) +
+  scale_color_manual(values = col_5groups) +
+  theme(
+    aspect.ratio = 0.45, 
+    legend.position = "none",
+    axis.title.y = element_blank(),
+    axis.title = element_text(size = f6_fs), 
+    axis.text = element_text(size = f6_fs), 
+    title = element_text(size = f6_fs * 0.9),
+    strip.text = element_text(size = f6_fs)
+  ) +
+  labs(
+    x = "Normalized Frequency",
+    title = "Cross-Sectional Means of Aligned Functions",
+    color = "Material"
+  )
+
+plot_hct_train_warp_means <-
+  hct_warp_means_sub |>
+  ggplot(aes(x = frequency_norm, y = warp_mean, color = material)) +
+  geom_line(size = 1) +
+  theme_bw(base_family = ff, base_size = f6_fs) +
+  theme(
+    aspect.ratio = 1,
+    axis.title.y = element_blank(),
+    axis.title.x = element_text(size = f6_fs), 
+    axis.text = element_text(size = f6_fs), 
+    title = element_text(size = f6_fs * 0.9),
+    strip.text = element_text(size = f6_fs),
+    legend.text = element_text(size = f6_fs),
+    legend.title = element_text(size = f6_fs),
+    legend.position = "bottom"
+  ) +
+  scale_color_manual(values = col_5groups) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 0.5))) +
+  labs(
+    x = "Normalized Frequency",
+    title = "Karcher Means of Warping Functions",
+    color = "Material"
+  )
+
+# Extract the legend
+f6_legend <- 
+  get_plot_component(
+    plot_hct_train_warp_means,
+    'guide-box-bottom', 
+    return_all = TRUE
+  )
+plot_hct_train_warp_means <- 
+  plot_hct_train_warp_means + 
+  theme(legend.position = "none")
+
+# Join the plots
+plot_grid(
+  plot_grid(
+    plot_hct_train_means,
+    plot_hct_train_warp_means,
+    rel_widths = c(0.65, 0.35),
+    label_fontfamily = ff
+  ),
+  f6_legend,
+  ncol = 1,
+  rel_heights = c(0.95, 0.05)
+)
+
+
+## ----fig7, fig.width = 10, fig.height = 4.5, out.width = '5in', fig.cap = "Proportion of variation (top) and PFI values (bottom) associated with the jfPCs (left) and vfPCs (right) in the H-CT example. The four jfPCs and vfPCs with the highest PFI are labeled.", warning = FALSE----
+
+# Specify the figure font size
+f7_fs = 10.5
+
+# Join proportion of variability and PFI for jfPCA and vfPCA
+hct_pv_pfi_jfpca <-
+  hct_prop_var_jfpca |>
+  mutate(fpca = "Joint fPCA", pfi = hct_jfpca_nn_pfi$importances_mean)
+hct_pv_pfi_vfpca <-
+  hct_prop_var_vfpca |>
+  mutate(fpca = "Vertical fPCA", pfi = hct_vfpca_nn_pfi$importances_mean)
+hct_pv_pfi <- 
+  bind_rows(hct_pv_pfi_jfpca, hct_pv_pfi_vfpca) |>
+  select(-latent) |>
+  rename(fpc = index) |>
+  pivot_longer(cols = -c(fpc, fpca), names_to = "variable") |>
+  mutate(
+    variable = fct_relevel(variable, "prop_var", "pfi"),
+    variable = fct_recode(
+      variable,
+      "Proportion of variation" = "prop_var",
+      "PFI" = "pfi"
+    )
+  )
+  
+hct_pfi_labels <-
+  hct_pv_pfi |>
+  filter(variable == "PFI") |>
+  filter((fpca == "Joint fPCA" & fpc %in% hct_top_jfpcs) |
+           (fpca == "Vertical fPCA" & fpc %in% hct_top_vfpcs)) |>
+  mutate(label_x = fpc, label_y = value, label_id = 1:n()) |>
+  mutate(label_x = ifelse(label_id == 1, label_x - 3, label_x)) |>
+  mutate(label_y = ifelse(label_id == 2, label_y + 0.04, label_y)) |>
+  mutate(label_x = ifelse(label_id == 2, label_x - 2, label_x)) |>
+  mutate(label_y = ifelse(label_id == 3, label_y + 0.02, label_y)) |>
+  mutate(label_x = ifelse(label_id == 3, label_x + 3.5, label_x)) |>
+  mutate(label_y = ifelse(label_id == 4, label_y + 0.03, label_y)) |>
+  mutate(label_y = ifelse(label_id == 5, label_y + 0.03, label_y)) |>
+  mutate(label_y = ifelse(label_id == 6, label_y + 0.03, label_y)) |>
+  mutate(label_y = ifelse(label_id == 7, label_y + 0.03, label_y)) |>
+  mutate(label_x = ifelse(label_id == 8, label_x - 3, label_x)) |>
+  mutate(label_y = ifelse(label_id == 9, label_y + 0.03, label_y)) |>
+  mutate(label_x = ifelse(label_id == 10, label_x + 2.5, label_x)) |>
+  mutate(label_y = ifelse(label_id == 11, label_y + 0.02, label_y)) |>
+  mutate(label_y = ifelse(label_id == 12, label_y + 0.03, label_y))
+
+# Create plots of proportion of variation explained and PFI values
+hct_pv_pfi |>
+  ggplot(aes(x = fpc, y = value)) +
+  geom_point(size = 0.5) +
+  geom_segment(aes(xend = fpc, yend = 0), size = 0.25) +
+  facet_grid(variable ~ fpca, scales = "free_y", switch = "y") +
+  geom_text(data = hct_pfi_labels,
+            aes(x = label_x, y = label_y, label = fpc),
+            size = f7_fs / 3.5) +
+  labs(x = "Principal Component") +
+  theme_bw(base_family = ff, base_size = f7_fs) +
+  theme(
+    strip.placement = "outside",
+    strip.background = 
+      element_rect(color = "white", fill = "white"),
+    axis.title.y = element_blank(),
+    axis.title.x = element_text(size = f7_fs),
+    axis.text = element_text(size = f7_fs),
+    title = element_text(size = f7_fs),
+    strip.text = element_text(size = f7_fs)
+  )
+
+
+## ----fig8, fig.width = 28, fig.height = 11, out.width = "5.5in", fig.cap = "Principal directions from the six vfPCs with the highest PFI from the H-CT data example."----
+
+# Specify the figure font size
+f8_fs = 30
+
+plot_pc_directions(
+  fpcs = hct_top_vfpcs,
+  fdasrvf = list(
+    "f_pca" = hct_train_vfpca_pcs[, 2:6, ],
+    "latent" = hct_train_vfpca_latent
+  ),
+  times = unique(hct_train_sub$frequency_norm),
+  fpca_method = "vfpca",
+  alpha = 0.9,
+  nrow = 2,
+  linesizes = rep(1.25, 5),
+  linetype = FALSE
+) +
+  theme_bw(base_size = f8_fs, base_family = ff) +
+  theme(
+    legend.key.width = unit(1, "cm"),
+    strip.background = element_rect(color = "white", fill = "white"),
+    aspect.ratio = 0.4,
+    legend.position = "bottom",
+    axis.title = element_text(size = f8_fs), 
+    axis.text = element_text(size = f8_fs), 
+    title = element_text(size = f8_fs),
+    strip.text = element_text(size = f8_fs),
+    legend.text = element_text(size = f8_fs),
+    legend.title = element_text(size = f8_fs)
+  )  +
+  scale_color_manual(values = col_pcdir_2sd) +
+  labs(
+    x = "Normalized Frequency",
+    y = "Intensity",
+    color = "Material",
+    size = "Material",
+    linetype = "Material"
+  )
+
+
+## ----inkjet-data-cleaning------------------------------------------------------------------------------------------------------------
+
+# File path for inkjet data
+inkjet_fp = paste0(fp, "data/inkjet/inkjet-cleaned.csv")
+
+# Create cleaned version of data (if not already created)
+if (!file.exists(inkjet_fp)) {
+  
+  # Load the raw data
+  inkjet_cyan_raw <- read.csv(paste0(fp, "data/inkjet_raw/RamanInkjet_PrelDataNoBsln1CYANrows.csv"))
+  inkjet_magenta_raw <- read.csv(paste0(fp, "data/inkjet_raw/RamanInkjet_PrelDataNoBsln2MAGENTArows.csv"))
+  inkjet_yellow_raw <- read.csv(paste0(fp, "data/inkjet_raw/RamanInkjet_PrelDataNoBsln3YELLOWrows.csv"))
+
+  # Add printer labels to the yellow data
+  inkjet_yellow_raw <-
+    inkjet_yellow_raw |>
+    mutate(
+      code = case_when(
+        str_detect(sample, "s003") ~ "P01",
+        str_detect(sample, "s011") ~ "P02",
+        str_detect(sample, "s012") ~ "P03",
+        str_detect(sample, "s015") ~ "P04",
+        str_detect(sample, "s001") ~ "P05",
+        str_detect(sample, "s002") ~ "P06",
+        str_detect(sample, "s016") ~ "P07",
+        str_detect(sample, "s010") ~ "P08",
+        str_detect(sample, "s014") ~ "P09",
+        str_detect(sample, "s004") ~ "P10",
+        str_detect(sample, "s005") ~ "P11"
+      )
+    ) |>
+    select(sample, code, everything())
+
+  # Join the three colors
+  inkjet_colors_joined = bind_rows(inkjet_cyan_raw, inkjet_magenta_raw, inkjet_yellow_raw)
+
+  # Clean up the data
+  inkjet <-
+    inkjet_colors_joined |>
+    rename("id" = "sample", "printer" = "code") |>
+    mutate(printer = as.numeric(str_remove(printer, "P"))) |>
+    mutate(id_copy = id) |>
+    separate(id_copy,
+             sep = 4,
+             into = c("ss_printer_code", "sample")) |>
+    select(-ss_printer_code) |>
+    separate(col = sample,
+             into = c("color", "sample"),
+             sep = 1) |>
+    mutate(sample = as.numeric(sample)) |>
+    select(id, printer, sample, color, everything()) |>
+    pivot_longer(
+      cols = c(-id, -printer, -color, -sample),
+      names_to = "spectra",
+      values_to = "intensity"
+    ) |>
+    mutate(spectra = str_remove(spectra, "X")) |>
+    mutate(spectra = -as.numeric(spectra)) |>
+    arrange(printer, color, sample)
+
+  # Save cleaned data
+  write.csv(inkjet, inkjet_fp, row.names = F)
+  
+}
+
+# Load inkjet data
+inkjet = read.csv(inkjet_fp)
+
+
+
+## ----inkjet-cv-folds-----------------------------------------------------------------------------------------------------------------
+
+# File path for cross validation folds
+inkjet_folds_fp = paste0(fp, "data/inkjet/inkjet-cv-folds.csv")
+
+# Create cross validation folds if not already created
+if (!file.exists(inkjet_folds_fp)) {
+  
+  # Determine number of printers
+  inkjet_n_printers = length(unique(inkjet$printer))
+
+  # Specify number of replications of three-fold cross validation
+  inkjet_n_reps = 10
+  
+  # Specify fold options for every 7 observations within a printer
+  inkjet_fold_ids = c(1,1,1,2,2,3,3)
+
+  # Randomly assign fold numbers
+  set.seed(20221221)
+  inkjet_folds <-
+    map_df(
+      .x = 1:inkjet_n_reps,
+      .f = function(r) {
+        map_df(
+          .x = 1:inkjet_n_printers,
+          .f = function(p) {
+            inkjet |>
+              distinct(printer, sample) |>
+              filter(printer == p) |>
+              mutate(rep = r) |>
+              mutate(fold = sample(inkjet_fold_ids, length(inkjet_fold_ids), replace = F))
+          }
+        )
+      }
+    )
+
+  # Save data with CV folds as CSV
+  write.csv(inkjet_folds, inkjet_folds_fp, row.names = F)
+
+}
+
+# Load cross validation folds 
+inkjet_folds = read.csv(inkjet_folds_fp)
+
+
+
+## 
+## ## -----------------------------------------------------------------------------
+## ##
+## ## THE ESA PROCESSING OF THE INKJET DATA WAS TOO COMPUTATIONALLY INTENSIVE TO
+## ## RUN IN R MARKDOWN. INSTEAD, IT WAS RUN USING PYTHON CODE ON A LARGER
+## ## COMPUTER. THE PYTHON SCRIPTS USED FOR THIS CAN BE FOUND IN THE FOLDER ./code.
+## ## THE FILES CONTAIN -inkjet- IN THE NAME, AND THE NUMBER AT THE BEGINNING OF
+## ## THE FILE NAME INDICATES THE ORDER IN WHICH THE FILES SHOULD BE RUN.
+## ##
+## ## -----------------------------------------------------------------------------
+## 
+
+## ----inkjet-scenarios----------------------------------------------------------------------------------------------------------------
+# File paths for saving CV scenarios
+fp_inkjet_cv_srfc = paste0(fp, "results/inkjet/inkjet-cv-srfc.rds")
+fp_inkjet_cv_rfc = paste0(fp, "results/inkjet/inkjet-cv-rfc.rds")
+
+# Get cross validation test fold predictions
+if (!file.exists(fp_inkjet_cv_srfc) | !file.exists(fp_inkjet_cv_rfc)) {
+  
+  # Specify smoothing values, reps, test fold numbers and color
+  inkjet_s = c(0, 5, 10, 15, 20, 25, 30, 35)
+  inkjet_reps = sort(unique(inkjet_folds$rep))
+  inkjet_test_folds = sort(unique(inkjet_folds$fold))
+  inkjet_colors = c("c", "m", "y")
+  
+  # Specify parameters for random forests
+  inkjet_rf_params <-
+    expand.grid(
+      pcs = seq(10, 100, 10),
+      ntrees = c(50, 100, 250, 500, 1000)
+    )
+
+  # Get all combinations of smoothing parameter, rep, fold, and color
+  inkjet_smooth_rep_fold_color <-
+    expand_grid(
+      s = inkjet_s,
+      rep = inkjet_reps,
+      test_fold = inkjet_test_folds,
+      color = inkjet_colors
+    )
+  
+  # Convert to a list
+  inkjet_smooth_rep_fold_color_list <-
+    list(
+      s = inkjet_smooth_rep_fold_color$s,
+      rep = inkjet_smooth_rep_fold_color$rep,
+      test_fold = inkjet_smooth_rep_fold_color$test_fold,
+      color = inkjet_smooth_rep_fold_color$color
+    )
+  
+  # Keep only values of rep, test fold, and colors
+  inkjet_rep_fold_color <- 
+    inkjet_smooth_rep_fold_color |>
+    distinct(rep, test_fold, color)
+  
+  # ... and convert to a list
+  inkjet_rep_fold_color_list <-
+    list(
+      rep = inkjet_rep_fold_color$rep,
+      test_fold = inkjet_rep_fold_color$test_fold,
+      color = inkjet_rep_fold_color$color
+    )
+  
+  # Save CV scenarios
+  saveRDS(inkjet_smooth_rep_fold_color_list, fp_inkjet_cv_srfc)
+  saveRDS(inkjet_rep_fold_color_list, fp_inkjet_cv_rfc)
+  
+}
+
+# Load CV scenarios
+inkjet_smooth_rep_fold_color_list = readRDS(fp_inkjet_cv_srfc)
+inkjet_rep_fold_color_list = readRDS(fp_inkjet_cv_rfc)
+
+
+
+## ----inkjet-cv-preds-----------------------------------------------------------------------------------------------------------------
+
+# File path for saving CV predictions
+fp_inkjet_cv_preds = paste0(fp, "results/inkjet/inkjet-cv-preds.rds")
+
+# Get cross validation test fold predictions
+if (!file.exists(fp_inkjet_cv_preds)) {
+
+  # Function for loading inkjet CV objects
+  load_inkjet <- function(rep, test_fold, color, data_type, fp, smoothing) {
+    py_load_object(
+      filename = paste0(
+        fp,
+        "data/inkjet/inkjet-cv-s",
+        smoothing,
+        "-rep_",
+        rep,
+        "-fold_",
+        test_fold,
+        "-color_",
+        color,
+        "-",
+        data_type,
+        ".pkl"
+      )
+    )
+  }
+
+  # Function for implementing cross-validation for inkjet data
+  get_inkjet_rf_cv_preds <- function(s, rep_curr, test_fold, color, pcs, ntrees) {
+  
+    # Load training data
+    train <-
+      load_inkjet(
+        smoothing = s, 
+        rep = rep_curr, 
+        test_fold = test_fold, 
+        color = color, 
+        data_type = "jfpca-train", 
+        fp = fp
+      )
+    
+    # Load testing data
+    test <-
+      load_inkjet(
+        smoothing = s, 
+        rep = rep_curr, 
+        test_fold = test_fold, 
+        color = color, 
+        data_type = "aligned-jfpca-test",
+        fp = fp
+      )
+    
+    # Extract training data printer and sample values
+    train_printer_sample <-
+      inkjet_folds |> 
+      filter(rep == rep_curr, fold != test_fold)
+      
+    # Extract testing data printer and sample values
+    test_printer_sample <-
+      inkjet_folds |>
+      filter(rep == rep_curr, fold == test_fold)
+
+    # Train models and compute CV predictions
+    set.seed(20230630)
+    inkjet_cv_preds <-
+      map2_df(
+        .x = pcs,
+        .y = ntrees,
+        .f = fit_inkjet_rf_and_predict,
+        train = train,
+        train_printer_sample = train_printer_sample,
+        test = test,
+        test_printer_sample = test_printer_sample
+      ) |>
+      mutate(
+        color = color,
+        s = s,
+        rep = rep_curr,
+        test_fold = test_fold
+      ) |>
+      select(color, s, rep, test_fold, everything())
+    
+    # Return the results
+    return(inkjet_cv_preds)
+      
+  }
+
+  # Function for fitting random forests and getting test data predictions
+  fit_inkjet_rf_and_predict <- function(pcs, ntrees, train, train_printer_sample, test, test_printer_sample) {
+    
+    # Create a dataframe with training data
+    rf_data <- data.frame(
+      printer = factor(train_printer_sample$printer), 
+      train$coef[,1:pcs]
+    )
+    
+    # Train random forest
+    rf = randomForest(printer ~ ., data = rf_data, ntree = ntrees)
+  
+    # Get test fold predictions
+    preds = predict(rf, data.frame(test$coef[,1:pcs]))
+    
+    # Put predictions in a dataframe
+    preds <- 
+      data.frame(
+        pcs = pcs, 
+        ntrees = ntrees, 
+        printer = test_printer_sample$printer,
+        sample = test_printer_sample$sample, 
+        pred = as.numeric(as.vector(preds))
+      )
+    
+  }
+  
+  # Implement CV for all specified scenarios
+  inkjet_cv_preds <- 
+    pmap_df(
+      .l = inkjet_smooth_rep_fold_color_list,
+      .f = get_inkjet_rf_cv_preds,
+      pcs = inkjet_rf_params$pcs,
+      ntrees = inkjet_rf_params$ntrees
+    )
+  
+  # Save CV predictions
+  saveRDS(inkjet_cv_preds, fp_inkjet_cv_preds)
+  
+}
+
+# Load CV results
+inkjet_cv_preds <-
+  readRDS(fp_inkjet_cv_preds) |>
+  mutate(
+    color = fct_recode(color, "Cyan" = "c", "Magenta" = "m", "Yellow" = "y")
+  )
+
+
+## ----inkjet-cv-results---------------------------------------------------------------------------------------------------------------
+
+# File for inkjet data cross validation accuracies
+inkjet_cv_acc_fp = paste0(fp, "results/inkjet/inkjet-cv-accuracy.csv")
+inkjet_cv_acc_summary_fp = paste0(fp, "results/inkjet/inkjet-cv-accuracy-summary.csv")
+inkjet_res_best_fp = paste0(fp, "results/inkjet/inkjet-cv-res-best.csv")
+inkjet_res_worst_fp = paste0(fp, "results/inkjet/inkjet-cv-res-worst.csv")
+
+# Compute cross validation accuracies
+if (!file.exists(inkjet_cv_acc_fp) | !file.exists(inkjet_cv_acc_summary_fp)) {
+  
+  # Compute cross validation accuracies (separately for each replicate)
+  inkjet_cv_acc <-
+    inkjet_cv_preds |>
+    summarise(
+      acc = sum(pred == printer) / length(printer),
+      .by = c(color, s, pcs, ntrees, rep)
+    )
+
+  # Compute cross validation accuracies (summaries over replicates)
+  inkjet_cv_acc_summary <- 
+    inkjet_cv_acc |>
+    summarise(
+      acc_ave = mean(acc),
+      acc_sd = sd(acc),
+      acc_min = min(acc),
+      acc_max = max(acc), 
+      .by = c(s, color, pcs, ntrees)
+    ) |>
+    mutate(color = factor(color))
+
+  # Determine top scenarios from CV results based on highest average accuracy
+  inkjet_res_best <- 
+    inkjet_cv_acc_summary |>
+    arrange(color, desc(acc_ave)) |>
+    slice(1, .by = color) |>
+    mutate_at(.vars = vars(acc_ave:acc_max), .funs = round, digits = 4)
+    
+  # Determine bottom scenarios from CV results based on lowest average accuracy
+  inkjet_res_worst <-
+    inkjet_cv_acc_summary |>
+    arrange(color, acc_ave) |>
+    slice(1, .by = color) |>
+    mutate_at(.vars = vars(acc_ave:acc_max), .funs = round, digits = 4)
+
+  # Save test fold accuracies (and best/worst scenarios)
+  write.csv(inkjet_cv_acc, inkjet_cv_acc_fp, row.names = F)
+  write.csv(inkjet_cv_acc_summary, inkjet_cv_acc_summary_fp, row.names = F)
+  write.csv(inkjet_res_best, inkjet_res_best_fp, row.names = F)
+  write.csv(inkjet_res_worst, inkjet_res_worst_fp, row.names = F)
+  
+}
+
+# Load cross validation accuracies
+inkjet_cv_acc = read.csv(inkjet_cv_acc_fp)
+inkjet_cv_acc_summary = read.csv(inkjet_cv_acc_summary_fp)
+inkjet_res_best = read.csv(inkjet_res_best_fp)
+inkjet_res_worst = read.csv(inkjet_res_worst_fp)
+
+
+
+## ----inkjet-pfi----------------------------------------------------------------------------------------------------------------------
+
+# Files for storing inkjet PFI values
+inkjet_pfi_best_fp = paste0(fp, "results/inkjet/inkjet-pfi-best.pkl")
+inkjet_pfi_worst_fp = paste0(fp, "results/inkjet/inkjet-pfi-worst.pkl")
+
+# Compute PFI for inkjet data
+if (!file.exists(inkjet_pfi_best_fp) | !file.exists(inkjet_pfi_worst_fp)) {
+  
+  # Extract vector of inkjet printers
+  inkjet_printer = inkjet |> distinct(printer, sample) |> pull(printer)
+  
+  # Function for computing PFI for a specific inkjet printer scenario
+  get_inkjet_pfi <- function(s, color, pcs, ntrees) {
+    set.seed(20230705)
+    s = ifelse(s < 10, paste0(0, s), s)
+    jfpca = py_load_object(paste0(fp, "data/inkjet/inkjet-s", s, "-jfpca-", tolower(color), ".pkl"))  
+    train = data.frame(printer = factor(inkjet_printer), jfpca$coef[,1:pcs])
+    rf = randomForest(printer ~ ., data = train, ntree = ntrees)
+    pfi <-
+      veesa::compute_pfi(
+        x = train |> select(-printer),
+        y = train$printer,
+        f = rf,
+        K = 10,
+        metric = "logloss"
+      )
+    pfi_df <- 
+      data.frame(
+        color = color, 
+        pc = 1:pcs, 
+        pfi = pfi$pfi, 
+        pfi_reps = t(pfi$pfi_single_reps)
+      )
+    return(list(jfpca = jfpca, pfi_df = pfi_df))
+  }
+  
+  # Compute PFI for the best inkjet printer scenarios
+  inkjet_pfi_best <- 
+    pmap(
+      .l = inkjet_res_best |> select(s, color, pcs, ntrees),
+      .f = get_inkjet_pfi
+    )
+  
+  # Compute PFI for the worst inkjet printer scenarios
+  inkjet_pfi_worst <- 
+    pmap(
+      .l = inkjet_res_worst |> select(s, color, pcs, ntrees),
+      .f = get_inkjet_pfi
+    )
+
+  # Save inkjet PFI results
+  py_save_object(inkjet_pfi_best, inkjet_pfi_best_fp)
+  py_save_object(inkjet_pfi_worst, inkjet_pfi_worst_fp)
+
+}
+
+# Load inkjet PFI results
+inkjet_pfi_best = py_load_object(inkjet_pfi_best_fp, convert = TRUE)
+inkjet_pfi_worst = py_load_object(inkjet_pfi_worst_fp, convert = TRUE)
+
+
+## ----inkjet-paper-results------------------------------------------------------------------------------------------------------------
+
+# File for results from Buzzini paper
+inkjet_paper_res_fp = paste0(fp, "results/inkjet/inkjet-paper-res.csv")
+inkjet_paper_res_best_fp = paste0(fp, "results/inkjet/inkjet-paper-res-best.csv")
+
+# Compute cross validation accuracies
+if (!file.exists(inkjet_paper_res_fp)) {
+  
+  # Put results from paper in a data frame
+  inkjet_paper_res <-
+    data.frame(
+      color = rep(c("Cyan", "Magenta", "Yellow"), each = 6),
+      method = rep(rep(c("PCA + LDA", "PLSDA", "Sparse LDA"), each = 2), 3),
+      baseline_corr = rep(c("No", "Yes"), 9),
+      acc_ave = c(0.86, 0.87, 0.88, 0.87, 0.91, 0.89, 0.88, 0.87, 0.92, 0.91, 
+                  0.92, 0.92, 0.87, 0.87, 0.88, 0.87, 0.92, 0.91),
+      acc_sd = c(0.08, 0.07, 0.06, 0.06, 0.05, 0.06, 0.07, 0.06, 0.05, 0.06, 
+                 0.06, 0.06, 0.05, 0.05, 0.06, 0.06, 0.04, 0.05),
+      acc_min = c(0.65, 0.74, 0.73, 0.71, 0.81, 0.79, 0.64, 0.76, 0.81, 0.79, 
+                  0.76, 0.76, 0.76, 0.79, 0.76, 0.76, 0.88, 0.77),
+      acc_max = c(1.00, 1.00, 0.96, 0.96, 1.00, 1.00, 1.00, 0.96, 1.00, 1.00, 
+                  1.00, 1.00, 1.00, 0.96, 1.00, 0.96, 1.00, 0.96)
+    ) |>
+    mutate(method_baseline = paste(method, "+", baseline_corr))
+  
+  # Determine ‘best’ results from paper methods based on highest accuracy 
+  # and highest minimum accuracy
+  inkjet_paper_res_best <-
+    inkjet_paper_res |>
+    filter(acc_ave == max(acc_ave), .by = color) |>
+    filter(acc_min == max(acc_min), .by = color)
+
+  # Save results from Buzzini paper
+  write.csv(inkjet_paper_res, inkjet_paper_res_fp, row.names = F)
+  write.csv(inkjet_paper_res_best, inkjet_paper_res_best_fp, row.names = F)
+  
+}
+
+# Load results from Buzzini paper
+inkjet_paper_res = read.csv(inkjet_paper_res_fp)
+inkjet_paper_res_best = read.csv(inkjet_paper_res_best_fp)
+
+
+
+## ----fig9, fig.height = 28, fig.width = 15, out.width = "3.5in", fig.cap = "Raman spectra signatures collected from 11 inkjet printers for the colored dots of cyan, magenta, and yellow."----
+
+# Specify the figure font size
+f9_fs = 22
+
+# Create figure
+inkjet |>
+  mutate(
+    printer = paste("Printer", printer),
+    color = fct_recode(color, "Cyan" = "c", "Magenta" = "m", "Yellow" = "y"),
+    spectra = -spectra
+  ) |>
+  mutate(printer = fct_relevel(printer, paste("Printer", 1:11))) |>
+  ggplot(aes(x = spectra, y = intensity, group = sample, color = color)) +
+  geom_line(alpha = 0.9, linewidth = 0.5) +
+  facet_grid(printer ~ color) +
+  labs(x = TeX("Wavenumber (cm$^{-1})$"), y = "Intensity") +
+  scale_color_manual(values = col_inkjet) +
+  scale_x_reverse() +
+  theme_bw(base_size = 26) +
+  theme(
+    legend.position = "none",
+    strip.background = element_blank(),
+    panel.spacing = unit(0.25, "lines"),
+    axis.title = element_text(size = f9_fs),
+    axis.text = element_text(size = f9_fs),
+    title = element_text(size = f9_fs),
+    strip.text = element_text(size = f9_fs),
+    legend.text = element_text(size = f9_fs),
+    legend.title = element_text(size = f9_fs)
+  )
+
+
+## ----tab1----------------------------------------------------------------------------------------------------------------------------
+
+# Create data frame with printer manufacturers and models
+inkjet_printer_types <-
+  data.frame(
+    "Printer" = 1:11,
+    "Manufacturer" = c(
+      "Brother",
+      "Canon Pixma",
+      "Canon PG",
+      "Epson",
+      rep("HP", 4),
+      "Lexmark",
+      rep("Sensient", 2)
+    ),
+    "Model" = c(
+      "MFC-665CW",
+      "MX340",
+      "210XL",
+      "Unknown",
+      "Officejet 5740",
+      "Deskjet f5180",
+      "Officejet 6500",
+      "Officejet 6500",
+      "228 2010 CE 81",
+      "Unknown",
+      "Unknown"
+    )
+  )
+
+# Create table for paper
+knitr::kable(
+  x = inkjet_printer_types, 
+  align = "cll", 
+  label = "tab:tab1",
+  caption = "Printer manufactures and models in the inkjet dataset."
+)
+
+
+## ----fig10, fig.height = 9, fig.width = 22, out.width = "5.5in", fig.cap = "Cross validation average accuracies. Triangles pointing up and down highlight the highest and lowest average cross validation accuracies from the VEESA pipeline, respectively, for each color. Horizontal dashed lines represent best average cross validation accuracies for each color from \\citet{buzzini:2021}."----
+
+# Specify the figure font size
+f10_fs = 23
+
+inkjet_cvs_for_plot <-
+  inkjet_cv_acc_summary |>
+  mutate(s = factor(s)) |>
+  mutate(ntrees = paste(ntrees, "trees")) |>
+  mutate(ntrees = factor(ntrees, levels = paste(c("50", "100", "250", "500", "1000"), "trees")))
+
+inkjet_res_best_for_plot <-
+  inkjet_res_best |>
+  mutate(ntrees = paste(ntrees, "trees")) |>
+  mutate(ntrees = factor(ntrees, levels = paste(c("50", "100", "250", "500", "1000"), "trees")))
+
+inkjet_res_worst_for_plot <-
+  inkjet_res_worst |>
+  mutate(ntrees = paste(ntrees, "trees")) |>
+  mutate(ntrees = factor(ntrees, levels = paste(c("50", "100", "250", "500", "1000"), "trees")))
+
+ggplot() +
+  geom_hline(
+    data = inkjet_paper_res_best,
+    mapping = aes(yintercept = acc_ave),
+    linewidth = 0.5,
+    linetype = "dashed"
+  ) +
+  geom_line(
+    data = inkjet_cvs_for_plot, 
+    mapping = aes(
+      x = pcs,
+      y = acc_ave,
+      color = s
+    )
+  ) +
+  geom_point(
+    data = inkjet_cvs_for_plot, 
+    mapping = aes(
+      x = pcs,
+      y = acc_ave,
+      color = s
+    )
+  ) +
+  geom_point(
+    data = inkjet_res_best_for_plot,
+    mapping = aes(
+        x = pcs,
+        y = acc_ave
+      ),
+    color = "black",
+    fill = "black",
+    size = 5, 
+    shape = 24,
+    alpha = 0.5
+  ) +
+  geom_point(
+    data = inkjet_res_worst_for_plot,
+    mapping = aes(
+        x = pcs,
+        y = acc_ave
+      ),
+    color = "black",
+    fill = "black",
+    size = 5, 
+    shape = 25,
+    alpha = 0.5
+  ) +
+  facet_grid(color ~ ntrees) +
+  scale_color_manual(values = wes_palette(name = "Zissou1", n = 16, type = "continuous")[c(1:3,8:9,12:15)]) +
+  theme_bw(base_size = 20) +
+  theme(
+    strip.background = element_blank(),
+    axis.title = element_text(size = f10_fs), 
+    axis.text = element_text(size = f10_fs), 
+    title = element_text(size = f10_fs),
+    strip.text = element_text(size = f10_fs),
+    legend.text = element_text(size = f10_fs),
+    legend.title = element_text(size = f10_fs)
+  ) +
+  labs(
+    x = "Number of PCs",
+    y = "Accuracy"
+  )
+
+
+## ----tab2----------------------------------------------------------------------------------------------------------------------------
+inkjet_res_best |>
+  select(color, s, pcs, ntrees, acc_ave) |>
+  rename(veesa_acc = acc_ave) |> 
+  mutate(scenario = "Best") |>
+  bind_rows(
+    inkjet_res_worst |>
+    select(color, s, pcs, ntrees, acc_ave) |>
+    rename(veesa_acc = acc_ave) |>
+    mutate(scenario = "Worst")
+  ) |>
+  left_join(inkjet_paper_res_best |> select(color, acc_ave), by = "color") |>
+  select(scenario, everything()) |>
+  mutate(acc_ave = ifelse(scenario == "Worst", "-", acc_ave)) |>
+  rename(
+    Scenario = scenario,
+    Color = color,
+    "Box Filter" = s,
+    "PCs" = pcs,
+    "Trees" = ntrees,
+    "VEESA" = veesa_acc,
+    "Buzzini" = acc_ave
+  ) |>
+  knitr::kable(
+    caption = "Cross validation average accuracies from the best and worst performing VEESA pipeline models applied to the inkjet dataset. The last column contains the highest cross validation accuracies achieved by \\citet{buzzini:2021}."
+  )
+
+
+## ----fig11, fig.height = 8, fig.width = 20, out.width = "5.5in", fig.cap = "Boxplots of PFI values across 10 replications from the best and worst performing models for cyan, magenta, and yellow inkjet signatures."----
+
+# Specify the figure font size
+f11_fs = 20
+
+bind_rows(
+  map_df(inkjet_pfi_best, "pfi_df") |> mutate(scenario = "Best Model"),
+  map_df(inkjet_pfi_worst, "pfi_df") |> mutate(scenario = "Worst Model")
+) |>
+  pivot_longer(cols = pfi_reps.1:pfi_reps.10, names_to = "rep", values_to = "fi") |>
+  group_by(color, pc, scenario) |>
+  mutate(
+    fi_min = min(fi),
+    fi_max = max(fi)
+  ) |>
+  ungroup() |>
+  ggplot(aes(x = pc, y = fi, group = pc)) +
+  geom_boxplot(aes(color = color)) +
+  facet_grid(color ~ scenario, scales = "free_x", space = "free_x") + 
+  scale_color_manual(values = col_inkjet) +
+  theme_bw(base_size = f11_fs, base_family = ff) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(color = "white", fill = "white"),
+    axis.title = element_text(size = f11_fs), 
+    axis.text = element_text(size = f11_fs), 
+    title = element_text(size = f11_fs),
+    strip.text = element_text(size = f11_fs),
+    legend.text = element_text(size = f11_fs),
+    legend.title = element_text(size = f11_fs)
+  )  +
+  labs(
+    x = "Principal component",
+    y = "Feature importance"
+  )
+
+
+
+## ----fig12, fig.height = 13, fig.width = 25, out.width = "5.5in", fig.cap = "Principal directions from the best (top row) and worst (bottom row) models for predictions with cyan inkjet signatures. The jfPCs selected are those with the largest PFI values for their respective model. PCs are ordered from left to right based on highest to lowest feature importance."----
+
+# Specify the figure font size
+f12_fs = 28
+
+plot_inkjet_pcs <- function(pfi_res) {
+  pc_order <-
+    pfi_res$pfi_df |>
+    arrange(desc(pfi)) |>
+    pull(pc)
+  veesa::plot_pc_directions(
+    fpc = pc_order[1:5],
+    fdasrvf = pfi_res$jfpca,
+    fpca_method = "jfpca",
+    times = -unique(inkjet$spectra),
+    alpha = 0.9,
+    nrow = 1,
+    linesizes = rep(1.5, 7), 
+    linetype = "solid"
+  ) +
+    scale_x_reverse() +
+    theme_bw(base_size = f12_fs, base_family = ff) +
+    theme(
+      legend.position = "bottom",
+      strip.background = element_rect(color = "white", fill = "white"),
+      axis.title = element_text(size = f12_fs), 
+      axis.text = element_text(size = f12_fs), 
+      title = element_text(size = f12_fs),
+      strip.text = element_text(size = f12_fs),
+      legend.text = element_text(size = f12_fs),
+      legend.title = element_text(size = f12_fs)
+    )  +
+    scale_color_manual(values = col_pcdir_3sd) +
+    guides(
+      color = guide_legend(nrow = 1), 
+      size = guide_legend(nrow = 1), 
+      override.aes = list(alpha = 1, size = 2)
+    ) +
+    labs(
+      x = TeX("Wavenumber (cm$^{-1})$"), 
+      y = "Intensity", 
+      title = paste(pfi_res$pfi_df$color[1])
+    ) 
+}
+
+inkjet_cyan_best_pc_dirs = plot_inkjet_pcs(inkjet_pfi_best[[1]]) + labs(title = "Cyan (best)")
+inkjet_cyan_worst_pc_dirs = plot_inkjet_pcs(inkjet_pfi_worst[[1]]) + labs(title = "Cyan (worst)")
+  
+plot_grid(
+  inkjet_cyan_best_pc_dirs + theme(legend.position = "none"),
+  inkjet_cyan_worst_pc_dirs + theme(legend.position = "none"),
+  get_plot_component(
+    inkjet_cyan_best_pc_dirs,
+    'guide-box-bottom', 
+    return_all = TRUE
+  ),
+  ncol = 1,
+  rel_heights = c(0.3, 0.3, 0.05)
+)
+
