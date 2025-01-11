@@ -1,6 +1,16 @@
 VEESA R Package
 ================
 
+<!-- badges: start -->
+
+[![CRAN
+status](https://www.r-pkg.org/badges/version/veesa)](https://CRAN.R-project.org/package=veesa)
+[![R-CMD-check](https://github.com/goodekat/ggResidpanel/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/goodekat/ggResidpanel/actions/workflows/R-CMD-check.yaml)
+[![test-coverage](https://github.com/goodekat/ggResidpanel/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/goodekat/ggResidpanel/actions/workflows/test-coverage.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/goodekat/ggResidpanel/branch/master/graph/badge.svg)](https://app.codecov.io/gh/goodekat/ggResidpanel?branch=master)
+<!-- badges: end -->
+
 # Set Up
 
 ``` r

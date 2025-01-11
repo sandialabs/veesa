@@ -28,19 +28,70 @@ plot_pc_directions(
 
 \item{digits}{Number of digits to print in the title for the proportion of variability explained by a PC}
 
-\item{alpha}{XXX}
+\item{alpha}{Vector of alpha values associated with lines in plot (length must match number of lines in plot)}
 
 \item{nrow}{Number of rows to use when creating a grid of plots}
 
-\item{linesizes}{XXX}
+\item{linesizes}{Vector of line widths associated with lines in plot (length must match number of lines in plot)}
 
-\item{linetype}{XXX}
+\item{linetype}{Vector of line types (e.g., "solid" or "dashed") associated with lines in plot (length must match number of lines in plot)}
 
 \item{freey}{Indicator for whether y-axis should be freed across facets}
 }
 \value{
-XXX
+ggplot2 plot of specified principal component directions
 }
 \description{
 Function for plotting the functional PC directions
+}
+\examples{
+# Load packages
+library(dplyr)
+library(tidyr)
+
+# Select a subset of functions from shifted peaks data
+sub_ids <- 
+  shifted_peaks$data |>
+  select(data, group, id) |> 
+  distinct() |>
+  group_by(data, group) |> 
+  slice(1:5) |> 
+  ungroup()
+  
+# Create a smaller version of shifted data
+shifted_peaks_sub <-
+  shifted_peaks$data |>
+  filter(id \%in\% sub_ids$id)
+  
+# Extract times
+shifted_peaks_times = unique(shifted_peaks_sub$t)
+
+# Convert training data to matrix
+shifted_peaks_train_matrix <-
+  shifted_peaks_sub |> 
+  filter(data == "Training") |>
+  select(-t) |>
+  mutate(index = paste0("t", index)) |>
+  pivot_wider(names_from = index, values_from = y) |>
+  select(-data, -id, -group) |> 
+  as.matrix() |> 
+  t()
+ 
+# Obtain veesa pipeline training data
+veesa_train <- 
+  prep_training_data(
+    f = shifted_peaks_train_matrix, 
+    time = shifted_peaks_times,
+    fpca_method = "jfpca"
+  )
+
+# Plot principal directions of PC1
+plot_pc_directions(
+  fpcs = 1,
+  fdasrvf = veesa_train$fpca_res,
+  fpca_method = "jfpca",
+  times = -shifted_peaks_times, 
+  linesizes = rep(0.75,5),
+  alpha = 0.9
+ )
 }

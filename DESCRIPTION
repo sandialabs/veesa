@@ -1,7 +1,7 @@
 Package: veesa
 Type: Package
 Title: VEESA Pipeline for Explainable Machine Learning with Functional Data
-Version: 0.1.2
+Version: 0.1.3
 Author: Katherine Goode, J. Derek Tucker
 Maintainer: Katherine Goode <kjgoode@sandia.gov>
 Description: Contains functions for applying the VEESA pipeline in R.
@@ -18,3 +18,5 @@ Imports:
   stats,
   stringr,
   tidyr
+Suggests:
+  randomForest

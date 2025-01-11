@@ -1,32 +1,101 @@
 #' Align test data and apply fPCA using elastic method applied to training data
 #'
-#' Applies steps 2 and 3 of the VEESA pipeline (alignment and elastic fPCA (jfpca, hfpca, or vfpca)) to 
-#'     the testing data based on the training data prepared using "prep_training_data".
+#' Applies steps 2 and 3 of the VEESA pipeline (alignment and elastic fPCA
+#'     (jfpca, hfpca, or vfpca)) to the testing data based on the training 
+#'     data prepared using "prep_training_data".
 #'     
-#' @param f Test data matrix (M x N) of N functions with M samples (already smoothed)
+#' @param f Matrix (size M x N) of test data with N functions and M samples.
 #' @param time Vector of size M describing the sample points
-#' @param train_prep Object returned from applying "prep_training_data" to training data
-#' @param optim_method Method used for optimization when computing the Karcher mean (DP, DP2, RBFGS, or DPo)
+#' @param train_prep Object returned from applying "prep_training_data" to 
+#'        training data.
+#' @param optim_method Method used for optimization when computing the Karcher 
+#'        mean. "DP", "DPo", and "RBFGS".
 #' 
 #' @export prep_testing_data
 #'
-#' @importFrom fdasrvf f_to_srvf gradient optimum.reparam time_warping warp_f_gamma
+#' @importFrom fdasrvf f_to_srvf gradient optimum.reparam time_warping 
+#'             warp_f_gamma
 #' @importFrom purrr map map2 pmap
 #' 
 #' @return List containing (varies slightly based on fpca method used): 
 #' \itemize{
 #'   \item time: vector of times when functions are observed (length of M)
-#'   \item f0: original test data functions - matrix (M x N) of N functions with M samples
+#'   \item f0: original test data functions - matrix (M x N) of N functions 
+#'         with M samples
 #'   \item fn: aligned test data functions - similar structure to f0
 #'   \item q0: original test data SRSFs - similar structure to f0
 #'   \item qn: aligned test data SRSFs - similar structure to f0
-#'   \item mqn: training data SRSF mean (test data functions are aligned to this function)
+#'   \item mqn: training data SRSF mean (test data functions are aligned to 
+#'         this function)
 #'   \item gam: test data warping functions - similar structure to f0
 #'   \item coef: test data principal component coefficients
-#'   \item psi: test data warping function SRVFs - similar structure to f0 (jfpca and hfpca only)
-#'   \item nu: test data shooting functions - similar structure to f0 (jfpca and hfpca only)
-#'   \item g: test data combination of aligned and shooting functions (jfpca only)
+#'   \item psi: test data warping function SRVFs - similar structure to f0 
+#'         (jfpca and hfpca only)
+#'   \item nu: test data shooting functions - similar structure to f0 (jfpca 
+#'         and hfpca only)
+#'   \item g: test data combination of aligned and shooting functions (jfpca 
+#'         only)
 #' }
+#' 
+#' @examples
+#' # Load packages
+#' library(dplyr)
+#' library(tidyr)
+#' 
+#' # Select a subset of functions from shifted peaks data
+#' sub_ids <- 
+#'   shifted_peaks$data |>
+#'   select(data, group, id) |> 
+#'   distinct() |>
+#'   group_by(data, group) |> 
+#'   slice(1:5) |> 
+#'   ungroup()
+#'   
+#' # Create a smaller version of shifted data
+#' shifted_peaks_sub <-
+#'   shifted_peaks$data |>
+#'   filter(id %in% sub_ids$id)
+#'   
+#' # Extract times
+#' shifted_peaks_times = unique(shifted_peaks_sub$t)
+#' 
+#' # Convert training data to matrix
+#' shifted_peaks_train_matrix <-
+#'   shifted_peaks_sub |> 
+#'   filter(data == "Training") |>
+#'   select(-t) |>
+#'   mutate(index = paste0("t", index)) |>
+#'   pivot_wider(names_from = index, values_from = y) |>
+#'   select(-data, -id, -group) |> 
+#'   as.matrix() |> 
+#'   t()
+#'  
+#' # Obtain veesa pipeline training data
+#' veesa_train <- 
+#'   prep_training_data(
+#'     f = shifted_peaks_train_matrix, 
+#'     time = shifted_peaks_times,
+#'     fpca_method = "jfpca"
+#'   )
+#'   
+#' # Convert testing data to matrix
+#' shifted_peaks_test_matrix <-
+#'   shifted_peaks_sub |> 
+#'   filter(data == "Testing") |>
+#'   select(-t) |>
+#'   mutate(index = paste0("t", index)) |>
+#'   pivot_wider(names_from = index, values_from = y) |>
+#'   select(-data, -id, -group) |> 
+#'   as.matrix() |> 
+#'   t()
+#'   
+#' # Obtain veesa pipeline testing data
+#' veesa_test <- prep_testing_data(
+#'   f = shifted_peaks_test_matrix,
+#'   time = shifted_peaks_times,
+#'   train_prep = veesa_train,
+#'   optim_method = "DP"
+#'  )
 
 prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
 
@@ -82,7 +151,11 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
   if (fpca_type %in% c("jfpca", "hfpca")) {
     # Compute SRSFs of test data warping functions:
     psi <-
-      purrr::map(.x = gamma, .f = fdasrvf::gradient, binsize = mean(diff(time))) %>%
+      purrr::map(
+        .x = gamma, 
+        .f = fdasrvf::gradient, 
+        binsize = mean(diff(time))
+      ) %>%
       purrr::map(.f = sqrt)
     # Compute test data shooting functions:
     if (fpca_type == "jfpca") {
@@ -96,7 +169,10 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
   # 2. If applying jfpca or vfpca, obtain id value:
   if (fpca_type %in% c("jfpca", "vfpca")) {
     f_id = purrr::map(.x = fn, .f = fpca_train$id)
-    q_id = purrr::map(.x = f_id, .f = function(f_id) sign(f_id) * sqrt(abs(f_id)))
+    q_id = purrr::map(
+      .x = f_id, 
+      .f = function(f_id) sign(f_id) * sqrt(abs(f_id))
+    )
   }
   
   # 3. Compute the principal components for the test data:

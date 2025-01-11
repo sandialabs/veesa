@@ -1,3 +1,9 @@
+# veesa 0.1.3
+
+- Updated inputs in prep_training_data to match fdasrvf
+- Added examples to documentation
+- Cleaned up wording in documentation a bit
+
 # veesa 0.1.2
 
 - Added shifted peaks data
@@ -10,4 +16,4 @@
 
 # veesa 0.1.0
 
-Initial version of package
+- Initial version of package
