@@ -3,6 +3,7 @@
 - Updated inputs in prep_training_data to match fdasrvf
 - Added examples to documentation
 - Cleaned up wording in documentation a bit
+- Added tests
 
 # veesa 0.1.2
 
