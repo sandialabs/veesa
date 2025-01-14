@@ -6,9 +6,8 @@ VEESA R Package
 [![CRAN
 status](https://www.r-pkg.org/badges/version/veesa)](https://CRAN.R-project.org/package=veesa)
 [![R-CMD-check](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml)
-[![test-coverage](https://github.com/sandialabs/veesa/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/sandialabs/veesa/actions/workflows/test-coverage.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/sandialabs/veesa/branch/master/graph/badge.svg)](https://app.codecov.io/gh/sandialabs/veesa?branch=master)
+coverage](https://codecov.io/gh/sandialabs/veesa/graph/badge.svg)](https://app.codecov.io/gh/sandialabs/veesa)
 <!-- badges: end -->
 
 # Set Up
