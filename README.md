@@ -10,24 +10,21 @@ coverage](https://codecov.io/gh/sandialabs/veesa/graph/badge.svg)](https://app.c
 
 `veesa` is an R package for implementing the VEESA pipeline for an
 explainable approach to training machine learning models with functional
-data inputs. (Paper appearing on arXiv soon!) The approach makes use of
-the [elastic shape analysis (ESA)
-framework](https://doi.org/10.1016/j.csda.2012.12.001) for functional
-data.
-
-We hope to have `veesa` available on CRAN soon! For now, install `veesa`
-from GitHub using the commands below.
+data inputs. See a preprint manuscript describing the approach on
+[arXiv](https://arxiv.org/abs/2501.07602). We hope to have `veesa`
+available on CRAN soon! For now, install `veesa` from GitHub using the
+commands below.
 
 ``` r
 remotes::install_github("sandialabs/veesa")
 ```
 
-Keep reading for an example training a random forest model using `veesa`
-with simulated functional data.
+Keep reading for an example using `veesa` to implement the VEESA
+pipeline.
 
 ## Demonstration
 
-### Set Up and Data Generation
+#### Set Up and Data Generation
 
 ``` r
 # Load R packages
@@ -95,7 +92,7 @@ Create a vector of times:
 times = sim_data$t %>% unique()
 ```
 
-### Alignment and fPCA
+#### Alignment and fPCA
 
 Prepare train data
 
@@ -129,7 +126,7 @@ Compare jfPCA coefficients from train and test data:
 
 <img src="README_files/figure-gfm/unnamed-chunk-11-1.png" width="75%" style="display: block; margin: auto;" />
 
-### Models
+#### Models
 
 Create response variable:
 
@@ -159,7 +156,7 @@ set.seed(20211130)
 rf_jfpca = randomForest(x1 ~ ., data = rf_jfpca_df)
 ```
 
-### PFI
+#### PFI
 
 Compute PFI:
 

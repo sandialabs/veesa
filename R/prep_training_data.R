@@ -56,7 +56,7 @@
 #'   select(data, group, id) |>
 #'   distinct() |>
 #'   group_by(data, group) |>
-#'   slice(1:5) |>
+#'   slice(1:3) |>
 #'   ungroup()
 #'
 #' # Create a smaller version of shifted data

@@ -45,7 +45,7 @@ sub_ids <-
   select(data, group, id) |>
   distinct() |>
   group_by(data, group) |>
-  slice(1:5) |>
+  slice(1:4) |>
   ungroup()
 
 # Create a smaller version of shifted data
@@ -102,7 +102,7 @@ pfi <-
     x = model_data |> select(-group),
     y = model_data$group,
     f = rf,
-    K = 5,
+    K = 1,
     metric = "accuracy"
  )
 }

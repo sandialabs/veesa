@@ -11,7 +11,7 @@ Description: Implements the VEESA pipeline for explainable machine learning
   inputs to elastic shape analysis principal components that account for
   vertial and/or horizontal variability. Computes feature importance to 
   identify important principal components and visualizes variability captured
-  by functional principal components. See Goode et al (2025) arXiv
+  by functional principal components. See Goode et al (2025) <arXiv:2501.07602>
   for technical details about the methodology.
 License: MIT + file LICENSE
 Encoding: UTF-8

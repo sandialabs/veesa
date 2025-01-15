@@ -14,20 +14,18 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, dpi = 300)
 ```
 
-`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. (Paper appearing on arXiv soon!) The approach makes use of the [elastic shape analysis (ESA) framework](https://doi.org/10.1016/j.csda.2012.12.001) for functional data.
-
-We hope to have `veesa` available on CRAN soon! For now, install `veesa` from GitHub using the commands below.
+`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. See a preprint manuscript describing the approach on [arXiv](https://arxiv.org/abs/2501.07602). We hope to have `veesa` available on CRAN soon! For now, install `veesa` from GitHub using the commands below.
 
 ```{r}
 #| eval: false
 remotes::install_github("sandialabs/veesa")
 ```
 
-Keep reading for an example training a random forest model using `veesa` with simulated functional data.
+Keep reading for an example using `veesa` to implement the VEESA pipeline.
 
 ## Demonstration
 
-### Set Up and Data Generation
+#### Set Up and Data Generation
 
 ```{r}
 #| message: false
@@ -109,7 +107,7 @@ Create a vector of times:
 times = sim_data$t %>% unique()
 ```
 
-### Alignment and fPCA
+#### Alignment and fPCA
 
 Prepare train data
 
@@ -196,7 +194,7 @@ bind_rows(train_plot_df_jfpca, test_plot_df_jfpca) %>%
   theme_bw()
 ```
 
-### Models
+#### Models
 
 Create response variable: 
 
@@ -226,7 +224,7 @@ set.seed(20211130)
 rf_jfpca = randomForest(x1 ~ ., data = rf_jfpca_df)
 ```
 
-### PFI
+#### PFI
 
 Compute PFI:
 
@@ -305,7 +303,6 @@ Principal directions of top PC for each jfPCA method:
 #| out-width: "60%"
 #| fig-align: "center"
 #| echo: false
-
 plot_pc_directions(
   fpcs = top_pc_jfpca,
   fdasrvf = train_transformed_jfpca$fpca_res,
