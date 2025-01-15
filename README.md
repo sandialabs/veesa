@@ -3,14 +3,31 @@ VEESA R Package
 
 <!-- badges: start -->
 
-[![CRAN
-status](https://www.r-pkg.org/badges/version/veesa)](https://CRAN.R-project.org/package=veesa)
 [![R-CMD-check](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/sandialabs/veesa/graph/badge.svg)](https://app.codecov.io/gh/sandialabs/veesa)
 <!-- badges: end -->
 
-# Set Up
+`veesa` is an R package for implementing the VEESA pipeline for an
+explainable approach to training machine learning models with functional
+data inputs. (Paper appearing on arXiv soon!) The approach makes use of
+the [elastic shape analysis (ESA)
+framework](https://doi.org/10.1016/j.csda.2012.12.001) for functional
+data.
+
+We hope to have `veesa` available on CRAN soon! For now, install `veesa`
+from GitHub using the commands below.
+
+``` r
+remotes::install_github("sandialabs/veesa")
+```
+
+Keep reading for an example training a random forest model using `veesa`
+with simulated functional data.
+
+## Demonstration
+
+### Set Up and Data Generation
 
 ``` r
 # Load R packages
@@ -34,8 +51,6 @@ col_pcdir_1sd = c(col_plus1, "black", col_minus1)
 col_pcdir_2sd = c(col_plus2, col_plus1, "black", col_minus1, col_minus2)
 ```
 
-# Data Simulation
-
 Simulate data:
 
 ``` r
@@ -54,7 +69,7 @@ sim_data = sim_data %>% mutate(data = ifelse(id %in% id_test, "test", "train"))
 
 Simulated functions colored by covariates:
 
-![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 Prepare matrices from the data frames:
 
@@ -70,7 +85,6 @@ prep_matrix <- function(df, train_test) {
     select(-t) %>%
     as.matrix()
 }
-
 sim_train_matrix = prep_matrix(df = sim_data, train_test = "train")
 sim_test_matrix = prep_matrix(df = sim_data, train_test = "test")
 ```
@@ -81,7 +95,7 @@ Create a vector of times:
 times = sim_data$t %>% unique()
 ```
 
-# Alignment and fPCA
+### Alignment and fPCA
 
 Prepare train data
 
@@ -91,22 +105,6 @@ train_transformed_jfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "jfpca",
-    optim_method = "DPo"
-  )
-
-train_transformed_vfpca <-
-  prep_training_data(
-    f = sim_train_matrix,
-    time = times, 
-    fpca_method = "vfpca",
-    optim_method = "DPo"
-  )
-
-train_transformed_hfpca <-
-  prep_training_data(
-    f = sim_train_matrix,
-    time = times, 
-    fpca_method = "hfpca",
     optim_method = "DPo"
   )
 ```
@@ -121,33 +119,17 @@ test_transformed_jfpca <-
     train_prep = train_transformed_jfpca,
     optim_method = "DPo"
   )
-
-test_transformed_vfpca <-
-  prep_testing_data(
-    f = sim_test_matrix,
-    time = times,
-    train_prep = train_transformed_vfpca,
-    optim_method = "DPo"
-  )
-
-test_transformed_hfpca <-
-  prep_testing_data(
-    f = sim_test_matrix,
-    time = times,
-    train_prep = train_transformed_hfpca,
-    optim_method = "DPo"
-  )
 ```
 
 Plot several PCs:
 
-![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-9-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 Compare jfPCA coefficients from train and test data:
 
-![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-3.png)<!-- -->
+<img src="README_files/figure-gfm/unnamed-chunk-11-1.png" width="75%" style="display: block; margin: auto;" />
 
-# Models
+### Models
 
 Create response variable:
 
@@ -159,7 +141,7 @@ x1_train <-
   pull(x1)
 ```
 
-Create data frames with PCs and response for random forest:
+Create data frame with PCs and response for random forest:
 
 ``` r
 rf_jfpca_df <- 
@@ -168,49 +150,37 @@ rf_jfpca_df <-
   rename_all(.funs = function(x) stringr::str_replace(x, "X", "pc")) %>%
   mutate(x1 = x1_train) %>%
   select(x1, everything())
-
-rf_vfpca_df <- 
-  train_transformed_vfpca$fpca_res$coef %>%
-  data.frame() %>%
-  rename_all(.funs = function(x) stringr::str_replace(x, "X", "pc")) %>%
-  mutate(x1 = x1_train) %>%
-  select(x1, everything())
-
-rf_hfpca_df <- 
-  train_transformed_hfpca$fpca_res$coef %>%
-  data.frame() %>%
-  rename_all(.funs = function(x) stringr::str_replace(x, "X", "pc")) %>%
-  mutate(x1 = x1_train) %>%
-  select(x1, everything())
 ```
 
-Fit random forests:
+Fit random forest:
 
 ``` r
 set.seed(20211130)
 rf_jfpca = randomForest(x1 ~ ., data = rf_jfpca_df)
-rf_vfpca = randomForest(x1 ~ ., data = rf_vfpca_df)
-rf_hfpca = randomForest(x1 ~ ., data = rf_hfpca_df)
 ```
 
-# PFI
+### PFI
 
 Compute PFI:
 
 ``` r
 set.seed(20211130)
-pfi_jfpca = compute_pfi(x = rf_jfpca_df %>% select(-x1), y = rf_jfpca_df$x1, f = rf_jfpca, K = 10, metric = "nmse")
-pfi_vfpca = compute_pfi(x = rf_vfpca_df %>% select(-x1), y = rf_vfpca_df$x1, f = rf_vfpca, K = 10, metric = "nmse")
-pfi_hfpca = compute_pfi(x = rf_hfpca_df %>% select(-x1), y = rf_hfpca_df$x1, f = rf_hfpca, K = 10, metric = "nmse")
+pfi_jfpca <- compute_pfi(
+  x = rf_jfpca_df %>% select(-x1),
+  y = rf_jfpca_df$x1,
+  f = rf_jfpca,
+  K = 10,
+  metric = "nmse"
+)
 ```
 
 PFI results (mean of reps):
 
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-15-3.png)<!-- -->
+<img src="README_files/figure-gfm/unnamed-chunk-16-1.png" width="75%" style="display: block; margin: auto;" />
 
 PFI results (variability across reps):
 
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->
+<img src="README_files/figure-gfm/unnamed-chunk-17-1.png" width="75%" style="display: block; margin: auto;" />
 
 Identify the top PC for each elastic fPCA method:
 
@@ -221,50 +191,8 @@ top_pc_jfpca <-
   arrange(desc(pfi)) %>%
   slice(1) %>%
   pull(pc)
-
-top_pc_vfpca <- 
-  data.frame(pfi = pfi_vfpca$pfi) %>%
-  mutate(pc = 1:n()) %>%
-  arrange(desc(pfi)) %>%
-  slice(1) %>%
-  pull(pc)
-
-top_pc_hfpca <- 
-  data.frame(pfi = pfi_hfpca$pfi) %>%
-  mutate(pc = 1:n()) %>%
-  arrange(desc(pfi)) %>%
-  slice(1) %>%
-  pull(pc)
 ```
 
 Principal directions of top PC for each jfPCA method:
 
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
-
-# Comparing Centered versus Not-Centered Warping Functions
-
-Apply alignment to jfPCA principal directions:
-
-``` r
-train_transformed_jfpca_centered = center_warping_funs(train_obj = train_transformed_jfpca)
-```
-
-Warping functions before/after centering:
-
-![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-20-2.png)<!-- -->
-
-Aligned functions before/after centering:
-
-![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
-
-# Comparing Aligned vs Not-Aligned jfPCA PC Directions
-
-Apply alignment to jfPCA principal directions:
-
-``` r
-jfpca_pcdirs_aligned = align_pcdirs(train_obj = train_transformed_jfpca)
-```
-
-Joint:
-
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->
+<img src="README_files/figure-gfm/unnamed-chunk-19-1.png" width="60%" style="display: block; margin: auto;" />

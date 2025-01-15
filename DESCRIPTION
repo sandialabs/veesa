@@ -1,14 +1,22 @@
 Package: veesa
 Type: Package
-Title: VEESA Pipeline for Explainable Machine Learning with Functional Data
-Version: 0.1.3
-Author: Katherine Goode, J. Derek Tucker
-Maintainer: Katherine Goode <kjgoode@sandia.gov>
-Description: Contains functions for applying the VEESA pipeline in R.
+Title: Pipeline for Explainable Machine Learning with Functional Data
+Version: 0.1.4
+Authors@R: c(
+  person("Katherine", "Goode", email = "kjgoode@sandia.gov", role = c("cre", "aut")),
+  person("J. Derek", "Tucker", email = "jftuck@sandia.gov", role = c("aut")),
+  person("Sandia National Laboratories", role = c("cph", "fnd")))
+Description: Implements the VEESA pipeline for explainable machine learning 
+  with functional data inputs. Converts training and testing data functional 
+  inputs to elastic shape analysis principal components that account for
+  vertial and/or horizontal variability. Computes feature importance to 
+  identify important principal components and visualizes variability captured
+  by functional principal components. See Goode et al (2025) arXiv
+  for technical details about the methodology.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Imports:
   dplyr,
   fdasrvf,
@@ -19,6 +27,6 @@ Imports:
   stringr,
   tidyr
 Suggests:
-    randomForest,
-    testthat (>= 3.0.0)
+  randomForest,
+  testthat (>= 3.0.0)
 Config/testthat/edition: 3

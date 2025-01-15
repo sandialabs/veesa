@@ -5,7 +5,6 @@ always_allow_html: yes
 ---
 
 <!-- badges: start -->
-[![CRAN status](https://www.r-pkg.org/badges/version/veesa)](https://CRAN.R-project.org/package=veesa)
 [![R-CMD-check](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/sandialabs/veesa/graph/badge.svg)](https://app.codecov.io/gh/sandialabs/veesa)
 <!-- badges: end -->
@@ -15,9 +14,23 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, dpi = 300)
 ```
 
-# Set Up
+`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. (Paper appearing on arXiv soon!) The approach makes use of the [elastic shape analysis (ESA) framework](https://doi.org/10.1016/j.csda.2012.12.001) for functional data.
 
-```{r message = FALSE}
+We hope to have `veesa` available on CRAN soon! For now, install `veesa` from GitHub using the commands below.
+
+```{r}
+#| eval: false
+remotes::install_github("sandialabs/veesa")
+```
+
+Keep reading for an example training a random forest model using `veesa` with simulated functional data.
+
+## Demonstration
+
+### Set Up and Data Generation
+
+```{r}
+#| message: false
 # Load R packages
 library(cowplot)
 library(dplyr)
@@ -39,8 +52,6 @@ col_pcdir_1sd = c(col_plus1, "black", col_minus1)
 col_pcdir_2sd = c(col_plus2, col_plus1, "black", col_minus1, col_minus2)
 ```
 
-# Data Simulation
-
 Simulate data:
 
 ```{r}
@@ -59,18 +70,19 @@ sim_data = sim_data %>% mutate(data = ifelse(id %in% id_test, "test", "train"))
 
 Simulated functions colored by covariates: 
 
-```{r fig.height = 10, fig.width = 7, echo = FALSE}
+```{r echo = FALSE}
+#| fig-height: 5
+#| fig-width: 27
 plot_sim <- function(cov) {
   sim_data %>%
     ggplot(aes(x = t, y = y, color = get(cov), group = id)) + 
     geom_line(alpha = 0.75) + 
     scale_color_gradientn(colours =  color_pal) +
-    theme_bw() + 
-    labs(title = paste0("Effect of ", cov), color = cov)
+    theme_bw(base_size = 20) + 
+    labs(color = cov)
 }
-
 sim_plot = map(.x = c("x1", "x2", "x3"), .f = plot_sim)
-plot_grid(plotlist = sim_plot, ncol = 1, byrow = F)
+plot_grid(plotlist = sim_plot, ncol = 3, byrow = F)
 ```
 
 Prepare matrices from the data frames:
@@ -87,7 +99,6 @@ prep_matrix <- function(df, train_test) {
     select(-t) %>%
     as.matrix()
 }
-
 sim_train_matrix = prep_matrix(df = sim_data, train_test = "train")
 sim_test_matrix = prep_matrix(df = sim_data, train_test = "test")
 ```
@@ -98,7 +109,7 @@ Create a vector of times:
 times = sim_data$t %>% unique()
 ```
 
-# Alignment and fPCA
+### Alignment and fPCA
 
 Prepare train data
 
@@ -108,22 +119,6 @@ train_transformed_jfpca <-
     f = sim_train_matrix,
     time = times, 
     fpca_method = "jfpca",
-    optim_method = "DPo"
-  )
-
-train_transformed_vfpca <-
-  prep_training_data(
-    f = sim_train_matrix,
-    time = times, 
-    fpca_method = "vfpca",
-    optim_method = "DPo"
-  )
-
-train_transformed_hfpca <-
-  prep_training_data(
-    f = sim_train_matrix,
-    time = times, 
-    fpca_method = "hfpca",
     optim_method = "DPo"
   )
 ```
@@ -138,59 +133,38 @@ test_transformed_jfpca <-
     train_prep = train_transformed_jfpca,
     optim_method = "DPo"
   )
-
-test_transformed_vfpca <-
-  prep_testing_data(
-    f = sim_test_matrix,
-    time = times,
-    train_prep = train_transformed_vfpca,
-    optim_method = "DPo"
-  )
-
-test_transformed_hfpca <-
-  prep_testing_data(
-    f = sim_test_matrix,
-    time = times,
-    train_prep = train_transformed_hfpca,
-    optim_method = "DPo"
-  )
 ```
 
 Plot several PCs:
 
-```{r fig.height = 5, fig.width = 18, echo = FALSE}
+```{r}
+#| fig-height: 5
+#| fig-width: 20
+#| echo: false
 plot_pc_directions(
   fpcs = 1:3,
   fdasrvf = train_transformed_jfpca$fpca_res,
   fpca_method = "jfpca",
-  time = times
+  time = times,
+  linesizes = rep(1, 5)
 ) + 
   scale_color_manual(values = col_pcdir_2sd) + 
-  theme_bw(base_size = 20)
-
-plot_pc_directions(
-  fpcs = 1:3,
-  fdasrvf = train_transformed_vfpca$fpca_res,
-  fpca_method = "vfpca",
-  time = times
-) + 
-  scale_color_manual(values = col_pcdir_2sd) +
-  theme_bw(base_size = 20)
-
-plot_pc_directions(
-  fpcs = 1:3,
-  fdasrvf = train_transformed_hfpca$fpca_res,
-  fpca_method = "hfpca",
-  time = times
-) +
-  scale_color_manual(values = col_pcdir_2sd) +
-  theme_bw(base_size = 20)
+  theme_bw(base_size = 20) + 
+  labs(
+    x = "Time",
+    y = "Intensity"
+  )
 ```
 
 Compare jfPCA coefficients from train and test data:
 
-```{r fig.height = 4, fig.width = 10, echo = FALSE}
-# Joint fPCA
+```{r}
+#| fig-height: 4
+#| fig-width: 10
+#| out-width: "75%"
+#| fig-align: "center"
+#| echo: false
+
 train_plot_df_jfpca <- 
   train_transformed_jfpca$fpca_res$coef %>%
   t() %>%
@@ -198,38 +172,9 @@ train_plot_df_jfpca <-
   mutate(pc = 1:n()) %>%
   pivot_longer(cols = -pc, names_to = "id") %>%
   mutate(data = "train")
+
 test_plot_df_jfpca <- 
   test_transformed_jfpca$coef %>%
-  data.frame() %>%
-  mutate(pc = 1:n()) %>%
-  pivot_longer(cols = -pc, names_to = "id") %>%
-  mutate(data = "test")
-
-# Vertical fPCA
-train_plot_df_vfpca <- 
-  train_transformed_vfpca$fpca_res$coef %>%
-  t() %>%
-  data.frame() %>%
-  mutate(pc = 1:n()) %>%
-  pivot_longer(cols = -pc, names_to = "id") %>%
-  mutate(data = "train")
-test_plot_df_vfpca <- 
-  test_transformed_vfpca$coef %>%
-  data.frame() %>%
-  mutate(pc = 1:n()) %>%
-  pivot_longer(cols = -pc, names_to = "id") %>%
-  mutate(data = "test")
-
-# Horizontal fPCA
-train_plot_df_hfpca <- 
-  train_transformed_hfpca$fpca_res$coef %>%
-  t() %>%
-  data.frame() %>%
-  mutate(pc = 1:n()) %>%
-  pivot_longer(cols = -pc, names_to = "id") %>%
-  mutate(data = "train")
-test_plot_df_hfpca <- 
-  test_transformed_hfpca$coef %>%
   data.frame() %>%
   mutate(pc = 1:n()) %>%
   pivot_longer(cols = -pc, names_to = "id") %>%
@@ -243,33 +188,15 @@ bind_rows(train_plot_df_jfpca, test_plot_df_jfpca) %>%
     color = data
   )) +
   geom_line(alpha = 0.5) +
-  labs(title = "Joint fPCA") +
-  theme_bw()
-
-bind_rows(train_plot_df_vfpca, test_plot_df_vfpca) %>%
-  ggplot(aes(
-    x = pc,
-    y = value,
-    group = factor(id):factor(data),
-    color = data
-  )) +
-  geom_line(alpha = 0.5) +
-  labs(title = "Vertical fPCA") +
-  theme_bw()
-
-bind_rows(train_plot_df_hfpca, test_plot_df_hfpca) %>%
-  ggplot(aes(
-    x = pc,
-    y = value,
-    group = factor(id):factor(data),
-    color = data
-  )) +
-  geom_line(alpha = 0.5) +
-  labs(title = "Horiztonal fPCA") +
+  labs(
+    title = "Joint fPCA", 
+    color = "Data",
+    x = "PC number",
+    y = "Coefficient") +
   theme_bw()
 ```
 
-# Models
+### Models
 
 Create response variable: 
 
@@ -281,7 +208,7 @@ x1_train <-
   pull(x1)
 ```
 
-Create data frames with PCs and response for random forest:
+Create data frame with PCs and response for random forest:
 
 ```{r}
 rf_jfpca_df <- 
@@ -290,73 +217,58 @@ rf_jfpca_df <-
   rename_all(.funs = function(x) stringr::str_replace(x, "X", "pc")) %>%
   mutate(x1 = x1_train) %>%
   select(x1, everything())
-
-rf_vfpca_df <- 
-  train_transformed_vfpca$fpca_res$coef %>%
-  data.frame() %>%
-  rename_all(.funs = function(x) stringr::str_replace(x, "X", "pc")) %>%
-  mutate(x1 = x1_train) %>%
-  select(x1, everything())
-
-rf_hfpca_df <- 
-  train_transformed_hfpca$fpca_res$coef %>%
-  data.frame() %>%
-  rename_all(.funs = function(x) stringr::str_replace(x, "X", "pc")) %>%
-  mutate(x1 = x1_train) %>%
-  select(x1, everything())
 ```
 
-Fit random forests:
+Fit random forest:
 
 ```{r}
 set.seed(20211130)
 rf_jfpca = randomForest(x1 ~ ., data = rf_jfpca_df)
-rf_vfpca = randomForest(x1 ~ ., data = rf_vfpca_df)
-rf_hfpca = randomForest(x1 ~ ., data = rf_hfpca_df)
 ```
 
-# PFI
+### PFI
 
 Compute PFI:
 
 ```{r}
 set.seed(20211130)
-pfi_jfpca = compute_pfi(x = rf_jfpca_df %>% select(-x1), y = rf_jfpca_df$x1, f = rf_jfpca, K = 10, metric = "nmse")
-pfi_vfpca = compute_pfi(x = rf_vfpca_df %>% select(-x1), y = rf_vfpca_df$x1, f = rf_vfpca, K = 10, metric = "nmse")
-pfi_hfpca = compute_pfi(x = rf_hfpca_df %>% select(-x1), y = rf_hfpca_df$x1, f = rf_hfpca, K = 10, metric = "nmse")
+pfi_jfpca <- compute_pfi(
+  x = rf_jfpca_df %>% select(-x1),
+  y = rf_jfpca_df$x1,
+  f = rf_jfpca,
+  K = 10,
+  metric = "nmse"
+)
 ```
 
 PFI results (mean of reps):
 
-```{r fig.height = 4, fig.width = 10, echo = FALSE}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 12
+#| out-width: "75%"
+#| fig-align: "center"
+#| echo: false
 data.frame(pfi = pfi_jfpca$pfi) %>%
   mutate(pc = 1:n()) %>%
   ggplot(aes(x = pc, y = pfi)) +
   geom_point() +
   geom_segment(aes(yend = 0, xend = pc)) +
-  theme_bw() +
-  labs(title = "PFI from Joint fPCA")
-
-data.frame(pfi = pfi_vfpca$pfi) %>%
-  mutate(pc = 1:n()) %>%
-  ggplot(aes(x = pc, y = pfi)) +
-  geom_point() +
-  geom_segment(aes(yend = 0, xend = pc)) +
-  theme_bw() +
-  labs(title = "PFI from Vertical fPCA")
-
-data.frame(pfi = pfi_hfpca$pfi) %>%
-  mutate(pc = 1:n()) %>%
-  ggplot(aes(x = pc, y = pfi)) +
-  geom_point() +
-  geom_segment(aes(yend = 0, xend = pc)) +
-  theme_bw() +
-  labs(title = "PFI from Horizontal fPCA")
+  theme_bw(base_size = 14) +
+  labs(
+    x = "Principal Component",
+    y = "Permutation Feature Importance"
+  )
 ```
 
 PFI results (variability across reps):
 
-```{r fig.height = 4, fig.width = 10, echo = FALSE}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 12 
+#| out-width: "75%"
+#| fig-align: "center"
+#| echo: false
 pfi_jfpca$pfi_single_reps %>%
   data.frame() %>%
   mutate(rep = 1:n()) %>%
@@ -367,34 +279,11 @@ pfi_jfpca$pfi_single_reps %>%
   mutate(pc = as.numeric(pc)) %>%
   ggplot(aes(x = pc, y = pfi, group = pc)) +
   geom_boxplot() +
-  theme_bw() +
-  labs(title = "PFI from Joint fPCA")
-
-pfi_vfpca$pfi_single_reps %>%
-  data.frame() %>%
-  mutate(rep = 1:n()) %>%
-  pivot_longer(cols = -rep,
-               names_to = "pc",
-               values_to = "pfi") %>%
-  mutate(pc = stringr::str_remove(pc, "X")) %>%
-  mutate(pc = as.numeric(pc)) %>%
-  ggplot(aes(x = pc, y = pfi, group = pc)) +
-  geom_boxplot() +
-  theme_bw() +
-  labs(title = "PFI from Vertical fPCA")
-
-pfi_hfpca$pfi_single_reps %>%
-  data.frame() %>%
-  mutate(rep = 1:n()) %>%
-  pivot_longer(cols = -rep,
-               names_to = "pc",
-               values_to = "pfi") %>%
-  mutate(pc = stringr::str_remove(pc, "X")) %>%
-  mutate(pc = as.numeric(pc)) %>%
-  ggplot(aes(x = pc, y = pfi, group = pc)) +
-  geom_boxplot() +
-  theme_bw() +
-  labs(title = "PFI from Horizontal fPCA")
+  theme_bw(base_size = 14) +
+  labs(
+    x = "Principal Component",
+    y = "Permutation Feature Importance"
+  )
 ```
 
 Identify the top PC for each elastic fPCA method:
@@ -406,132 +295,25 @@ top_pc_jfpca <-
   arrange(desc(pfi)) %>%
   slice(1) %>%
   pull(pc)
-
-top_pc_vfpca <- 
-  data.frame(pfi = pfi_vfpca$pfi) %>%
-  mutate(pc = 1:n()) %>%
-  arrange(desc(pfi)) %>%
-  slice(1) %>%
-  pull(pc)
-
-top_pc_hfpca <- 
-  data.frame(pfi = pfi_hfpca$pfi) %>%
-  mutate(pc = 1:n()) %>%
-  arrange(desc(pfi)) %>%
-  slice(1) %>%
-  pull(pc)
 ```
 
 Principal directions of top PC for each jfPCA method:
 
-```{r fig.height = 4, fig.width = 8, echo = FALSE}
+```{r}
+#| fig-height: 4
+#| fig-width: 8 
+#| out-width: "60%"
+#| fig-align: "center"
+#| echo: false
+
 plot_pc_directions(
   fpcs = top_pc_jfpca,
   fdasrvf = train_transformed_jfpca$fpca_res,
   fpca_method = "jfpca",
-  nrow = 2
+  nrow = 2, 
+  linesizes = rep(1, 5)
 ) +
   scale_color_manual(values = col_pcdir_2sd) +
   labs(title = "Top PC for Joint fPCA")
-
-plot_pc_directions(
-  fpcs = top_pc_vfpca,
-  fdasrvf = train_transformed_vfpca$fpca_res,
-  fpca_method = "vfpca",
-  nrow = 2
-) +
-  scale_color_manual(values = col_pcdir_2sd) +
-  labs(title = "Top PC for Vertical fPCA")
-
-plot_pc_directions(
-  fpcs = top_pc_hfpca,
-  fdasrvf = train_transformed_hfpca$fpca_res,
-  fpca_method = "hfpca",
-  nrow = 2
-) +
-  scale_color_manual(values = col_pcdir_2sd) +
-  labs(title = "Top PC for Horizontal fPCA")
-```
-
-# Comparing Centered versus Not-Centered Warping Functions
-
-Apply alignment to jfPCA principal directions:
-
-```{r}
-train_transformed_jfpca_centered = center_warping_funs(train_obj = train_transformed_jfpca)
-```
-
-Warping functions before/after centering:
-
-```{r echo = FALSE}
-data.frame(train_transformed_jfpca$alignment$warping_functions) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "Before Centering") + 
-  theme_bw()
-
-data.frame(train_transformed_jfpca_centered$alignment$warping_functions) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "After Centering") + 
-  theme_bw()
-```
-
-Aligned functions before/after centering:
-
-```{r echo = FALSE}
-data.frame(train_transformed_jfpca$alignment$fn) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "Before Centering") + 
-  theme_bw()
-
-data.frame(train_transformed_jfpca_centered$alignment$fn) %>%
-  mutate(time = times) %>%
-  pivot_longer(cols = -time, names_to = "id") %>%
-  mutate(id = as.numeric(stringr::str_remove(id, "X"))) %>%
-  ggplot(aes(x = time, y = value, group = id)) + 
-  geom_line() + 
-  labs(title = "After Centering") + 
-  theme_bw()
-```
-
-# Comparing Aligned vs Not-Aligned jfPCA PC Directions
-
-Apply alignment to jfPCA principal directions:
-
-```{r}
-jfpca_pcdirs_aligned = align_pcdirs(train_obj = train_transformed_jfpca)
-```
-
-Joint: 
-
-```{r fig.height = 5, fig.width = 18, echo = FALSE}
-plot_pc_directions(
-  fpcs = 1:3,
-  fdasrvf = train_transformed_jfpca$fpca_res,
-  fpca_method = "jfpca",
-  time = times
-) + 
-  scale_color_manual(values = col_pcdir_2sd) + 
-  theme_bw(base_size = 20)
-
-plot_pc_directions(
-  fpcs = 1:3,
-  fdasrvf = jfpca_pcdirs_aligned$fpca_res,
-  fpca_method = "jfpca",
-  time = times
-) + 
-  scale_color_manual(values = col_pcdir_2sd) + 
-  theme_bw(base_size = 20)
 ```
 

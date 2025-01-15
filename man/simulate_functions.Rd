@@ -24,7 +24,7 @@ Data frame with the following columns (where f is the function):
 }
 }
 \description{
-Function for simulating a set of functional data based on a deterministic function 
+Function for simulating a set of functional data based on a deterministic function
     with covariates that affect the shape of the functions
 }
 \details{
@@ -39,4 +39,8 @@ where the covariates are generated as follows:
   \item x_2 generated from Unif(0.1,0.5)
   \item x_3 generated from Unif(-0.1,0.1)
 }
+}
+\examples{
+# Simulate data
+sim_data = simulate_functions(M = 100, N = 75, seed = 20211130)
 }

@@ -1,3 +1,7 @@
+# veesa 0.1.4
+
+- Initial CRAN submission!
+
 # veesa 0.1.3
 
 - Updated inputs in prep_training_data to match fdasrvf

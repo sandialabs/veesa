@@ -26,31 +26,31 @@ prep_training_data(
 
 \item{time}{Vector of size M corresponding to the M sample points.}
 
-\item{fpca_method}{Character string specifying the type of elastic fPCA 
+\item{fpca_method}{Character string specifying the type of elastic fPCA
 method to use. Options are 'jfpca', 'hfpca', or 'vfpca'.}
 
 \item{lambda}{Numeric value specifying the elasticity. Default is 0.}
 
-\item{penalty_method}{String specifying the penalty term used in the 
-formulation of the cost function to minimize for alignment. Choices 
-are "roughness" which uses the norm of the second derivative, 
-"geodesic" which uses the geodesic distance to the identity and 
-"norm" which uses the Euclidean distance to the identity. Defaults 
+\item{penalty_method}{String specifying the penalty term used in the
+formulation of the cost function to minimize for alignment. Choices
+are "roughness" which uses the norm of the second derivative,
+"geodesic" which uses the geodesic distance to the identity and
+"norm" which uses the Euclidean distance to the identity. Defaults
 is "roughness".}
 
-\item{centroid_type}{String specifying the type of centroid to align to. 
+\item{centroid_type}{String specifying the type of centroid to align to.
 Options are "mean" or "median". Defaults is "mean".}
 
-\item{center_warpings}{Boolean specifying whether to center the estimated 
+\item{center_warpings}{Boolean specifying whether to center the estimated
 warping functions. Defaults is TRUE.}
 
-\item{parallel}{Boolean specifying whether to run calculations in parallel. 
+\item{parallel}{Boolean specifying whether to run calculations in parallel.
 Defaults is FALSE.}
 
-\item{cores}{Integer specifying the number of cores in parallel. Default is 
+\item{cores}{Integer specifying the number of cores in parallel. Default is
 -1, which uses all cores.}
 
-\item{optim_method}{Method used for optimization when computing the Karcher 
+\item{optim_method}{Method used for optimization when computing the Karcher
 mean. Options are "DP", "DPo", and "RBFGS".}
 
 \item{max_iter}{An integer value specifying the maximum number of iterations.
@@ -60,15 +60,15 @@ Defaults to 20L.}
 
 \item{C}{Balance value. Default = NULL.}
 
-\item{ci}{Geodesic standard deviations to be computed. Default is 
+\item{ci}{Geodesic standard deviations to be computed. Default is
 c(-2, -1, 0, 1, 2).}
 }
 \value{
-List with three objects: 
+List with three objects:
 \itemize{
   \item alignment: output from fdasrvf::time_warping
   \item fpca_type: type of elastic FPCA method applied
-  \item fpca_res: output from fdasrvf::jointFPCA, fdasrvf::horizFPCA, or 
+  \item fpca_res: output from fdasrvf::jointFPCA, fdasrvf::horizFPCA, or
         fdasrvf::vertFPCA (dependent on fpca_type)
 }
 }
@@ -82,37 +82,37 @@ library(dplyr)
 library(tidyr)
 
 # Select a subset of functions from shifted peaks data
-sub_ids <- 
+sub_ids <-
   shifted_peaks$data |>
-  select(data, group, id) |> 
+  select(data, group, id) |>
   distinct() |>
-  group_by(data, group) |> 
-  slice(1:5) |> 
+  group_by(data, group) |>
+  slice(1:5) |>
   ungroup()
-  
+
 # Create a smaller version of shifted data
 shifted_peaks_sub <-
   shifted_peaks$data |>
   filter(id \%in\% sub_ids$id)
-  
+
 # Extract times
 shifted_peaks_times = unique(shifted_peaks_sub$t)
 
 # Convert training data to matrix
 shifted_peaks_train_matrix <-
-  shifted_peaks_sub |> 
+  shifted_peaks_sub |>
   filter(data == "Training") |>
   select(-t) |>
   mutate(index = paste0("t", index)) |>
   pivot_wider(names_from = index, values_from = y) |>
-  select(-data, -id, -group) |> 
-  as.matrix() |> 
+  select(-data, -id, -group) |>
+  as.matrix() |>
   t()
- 
+
 # Obtain veesa pipeline training data
-veesa_train <- 
+veesa_train <-
   prep_training_data(
-    f = shifted_peaks_train_matrix, 
+    f = shifted_peaks_train_matrix,
     time = shifted_peaks_times,
     fpca_method = "jfpca"
   )

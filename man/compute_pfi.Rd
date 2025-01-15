@@ -15,7 +15,8 @@ compute_pfi(x, y, f, K, metric, eps = 1e-15)
 
 \item{K}{Number of repetitions to perform for PFI}
 
-\item{metric}{Metric used to compute PFI (choose from "accuracy", "logloss", and "nmse")}
+\item{metric}{Metric used to compute PFI (choose from "accuracy", "logloss",
+and "nmse")}
 
 \item{eps}{Log loss is undefined for p = 0 or p = 1, so probabilities are}
 }
@@ -23,11 +24,14 @@ compute_pfi(x, y, f, K, metric, eps = 1e-15)
 List containing
 \itemize{
   \item \code{pfi}: Vector of PFI values (averaged over replicates)
-  \item \code{pfi_single_reps}: Matrix of containing the feature importance values from each replicate (rows associated with reps; columns associated with data observations)
+  \item \code{pfi_single_reps}: Matrix of containing the feature importance
+         values from each replicate (rows associated with reps; columns
+         associated with data observations)
 }
 }
 \description{
-Function for computing PFI for a given model and dataset (training or testing)
+Function for computing PFI for a given model and dataset (training or
+testing)
 }
 \examples{
 # Load packages
@@ -36,54 +40,54 @@ library(tidyr)
 library(randomForest)
 
 # Select a subset of functions from shifted peaks data
-sub_ids <- 
+sub_ids <-
   shifted_peaks$data |>
-  select(data, group, id) |> 
+  select(data, group, id) |>
   distinct() |>
-  group_by(data, group) |> 
-  slice(1:5) |> 
+  group_by(data, group) |>
+  slice(1:5) |>
   ungroup()
-  
+
 # Create a smaller version of shifted data
 shifted_peaks_sub <-
   shifted_peaks$data |>
   filter(id \%in\% sub_ids$id)
-  
+
 # Extract times
 shifted_peaks_times = unique(shifted_peaks_sub$t)
 
 # Convert training data to matrix
 shifted_peaks_train_matrix <-
-  shifted_peaks_sub |> 
+  shifted_peaks_sub |>
   filter(data == "Training") |>
   select(-t) |>
   mutate(index = paste0("t", index)) |>
   pivot_wider(names_from = index, values_from = y) |>
-  select(-data, -id, -group) |> 
-  as.matrix() |> 
+  select(-data, -id, -group) |>
+  as.matrix() |>
   t()
- 
+
 # Obtain veesa pipeline training data
-veesa_train <- 
+veesa_train <-
   prep_training_data(
-    f = shifted_peaks_train_matrix, 
+    f = shifted_peaks_train_matrix,
     time = shifted_peaks_times,
     fpca_method = "jfpca"
   )
-  
+
 # Obtain response variable values
 model_output <-
-  shifted_peaks_sub |> 
+  shifted_peaks_sub |>
   filter(data == "Training") |>
-  select(id, group) |> 
+  select(id, group) |>
   distinct()
-  
+
 # Prepare data for model
-model_data <- 
-  veesa_train$fpca_res$coef |> 
-  data.frame() |> 
+model_data <-
+  veesa_train$fpca_res$coef |>
+  data.frame() |>
   mutate(group = factor(model_output$group))
-  
+
 # Train model
 set.seed(20210301)
 rf <-
@@ -91,7 +95,7 @@ rf <-
     formula = group ~ .,
     data = model_data
   )
-   
+
 # Compute feature importance values
 pfi <-
   compute_pfi(

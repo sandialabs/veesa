@@ -12,24 +12,24 @@ align_pcdirs(train_obj)
 \item{train_obj}{Output object from `prep_training_data` (jfpca only)}
 }
 \value{
-List with the same structure as `prep_training_data`, but 
+List with the same structure as `prep_training_data`, but
 the principal directions are replaced with the aligned version and gamI is
 included in the fpca_res object.
 
-List with the same structure as `prep_training_data`, but 
+List with the same structure as `prep_training_data`, but
 the principal directions are replaced with the aligned version and gamI is
 included in the fpca_res object.
 }
 \description{
 The function 'prep_training_data' does not center the warping functions,
-which leads to issues when visualizing joint and horizontal principal 
-component directions. This function aligns the principal directions for 
+which leads to issues when visualizing joint and horizontal principal
+component directions. This function aligns the principal directions for
 improved interpretability of the principal directions. Currently, only
 alignment for jfPCA has been implemented.
 
 The function 'prep_training_data' does not center the warping functions,
-which leads to issues when visualizing joint and horizontal principal 
-component directions. This function aligns the principal directions for 
+which leads to issues when visualizing joint and horizontal principal
+component directions. This function aligns the principal directions for
 improved interpretability of the principal directions. Currently, only
 alignment for jfPCA has been implemented.
 }
