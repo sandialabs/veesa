@@ -14,10 +14,15 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, dpi = 300)
 ```
 
-`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. See a preprint manuscript describing the approach on [arXiv](https://arxiv.org/abs/2501.07602). We hope to have `veesa` available on CRAN soon! For now, install `veesa` from GitHub using the commands below.
+`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. See a preprint manuscript describing the approach on [arXiv](https://arxiv.org/abs/2501.07602). Installing `veesa` can be implemented using either of the commands below.
 
 ```{r}
 #| eval: false
+
+# CRAN
+install.packages("veesa")
+
+# Development version from GitHub
 remotes::install_github("sandialabs/veesa")
 ```
 

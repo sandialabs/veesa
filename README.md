@@ -11,11 +11,14 @@ coverage](https://codecov.io/gh/sandialabs/veesa/graph/badge.svg)](https://app.c
 `veesa` is an R package for implementing the VEESA pipeline for an
 explainable approach to training machine learning models with functional
 data inputs. See a preprint manuscript describing the approach on
-[arXiv](https://arxiv.org/abs/2501.07602). We hope to have `veesa`
-available on CRAN soon! For now, install `veesa` from GitHub using the
-commands below.
+[arXiv](https://arxiv.org/abs/2501.07602). Installing `veesa` can be
+implemented using either of the commands below.
 
 ``` r
+# CRAN
+install.packages("veesa")
+
+# Development version from GitHub
 remotes::install_github("sandialabs/veesa")
 ```
 

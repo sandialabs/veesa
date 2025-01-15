@@ -1,6 +1,7 @@
 # veesa 0.1.4
 
 - Initial CRAN submission!
+- Documentation clean up
 
 # veesa 0.1.3
 
