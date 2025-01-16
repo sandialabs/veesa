@@ -37,11 +37,6 @@ jobs:
           covr::to_cobertura(cov)
         shell: Rscript {0}
 
-      # - name: Upload coverage reports to Codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #       token: ${{ secrets.CODECOV_TOKEN }}
-
       - uses: codecov/codecov-action@v4
         with:
           # Fail if error if not on PR, or if on PR and token is given
