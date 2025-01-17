@@ -36,7 +36,7 @@
 #'   select(data, group, id) |>
 #'   distinct() |>
 #'   group_by(data, group) |>
-#'   slice(1:5) |>
+#'   slice(1:4) |>
 #'   ungroup()
 #'
 #' # Create a smaller version of shifted data
@@ -86,7 +86,7 @@ plot_pc_directions <- function(
     nrow = 1,
     linesizes = NULL,
     linetype = TRUE,
-    freey = F
+    freey = FALSE
   ) {
 
   # Compute prop var

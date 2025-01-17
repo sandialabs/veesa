@@ -48,7 +48,7 @@
 #'   select(data, group, id) |>
 #'   distinct() |>
 #'   group_by(data, group) |>
-#'   slice(1:5) |>
+#'   slice(1:4) |>
 #'   ungroup()
 #'
 #' # Create a smaller version of shifted data
@@ -161,7 +161,7 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
     if (fpca_type == "jfpca") {
       mu_psi = fpca_train$mu_psi
     } else {
-      mu_psi = rowMeans(matrix(unlist(psi), ncol = ntest, byrow = F))
+      mu_psi = rowMeans(matrix(unlist(psi), ncol = ntest, byrow = FALSE))
     }
     nu = purrr::map(.x = psi, .f = fdasrvf::inv_exp_map, Psi = mu_psi)
   }
@@ -189,7 +189,7 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
     # Second, compute the PCs
     pcs = purrr::map(.x = h, .f = function(h) (h - h_mean) %*% fpca_train$U)
   } else if (fpca_type == "hfpca") {
-    nu_mean = rowMeans(matrix(unlist(nu), ncol = ntest, byrow = F))
+    nu_mean = rowMeans(matrix(unlist(nu), ncol = ntest, byrow = FALSE))
     pcs = purrr::map(.x = nu, .f = function(nu) (nu - nu_mean) %*% fpca_train$U)
   }
 
@@ -220,7 +220,7 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
     map(
       .f = function(x) {
         if (typeof(x) == "list") {
-          unlist(x) %>% matrix(ncol = ntest, byrow = F)
+          unlist(x) %>% matrix(ncol = ntest, byrow = FALSE)
         } else {
           x
         }

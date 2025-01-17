@@ -1,23 +1,18 @@
 Package: veesa
 Type: Package
 Title: Pipeline for Explainable Machine Learning with Functional Data
-Version: 0.1.5
+Version: 0.1.6
 Authors@R: c(
   person("Katherine", "Goode", email = "kjgoode@sandia.gov", role = c("cre", "aut")),
   person("J. Derek", "Tucker", email = "jftuck@sandia.gov", role = c("aut")),
   person("Sandia National Laboratories", role = c("cph", "fnd")))
-Description: Implements the Variable importance Explainable Elastic Shape 
-  Analysis pipeline for explainable machine learning with functional data 
-  inputs. Converts training and testing data functional inputs to elastic shape 
-  analysis principal components that account for vertical and/or horizontal 
-  variability. Computes feature importance to identify important principal 
-  components and visualizes variability captured by functional principal 
-  components. See Goode et al. (2025) <doi:10.48550/arXiv.2501.07602> for 
-  technical details about the methodology.
+Description: Implements the Variable importance Explainable Elastic Shape Analysis pipeline for explainable machine learning with functional data inputs. Converts training and testing data functional inputs to elastic shape analysis principal components that account for vertical and/or horizontal variability. Computes feature importance to identify important principal components and visualizes variability captured by functional principal components. See Goode et al. (2025) <doi:10.48550/arXiv.2501.07602> for technical details about the methodology.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
+Depends:
+  R (>= 3.5.0)
 Imports:
   dplyr,
   fdasrvf,

@@ -63,7 +63,7 @@ Separate data into training/testing:
 set.seed(20211130)
 id = unique(sim_data$id)
 M_test = length(id) * 0.25
-id_test = sample(x = id, size = M_test, replace = F)
+id_test = sample(x = id, size = M_test, replace = FALSE)
 sim_data = sim_data %>% mutate(data = ifelse(id %in% id_test, "test", "train"))
 ```
 

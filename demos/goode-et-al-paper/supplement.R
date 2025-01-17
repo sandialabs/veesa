@@ -28,7 +28,7 @@ library(veesa)
 library(wesanderson)
 
 # Specify the conda environment to use
-use_condaenv(condaenv = "veesa", required = T)
+use_condaenv(condaenv = "veesa", required = TRUE)
 
 # Specify colors for groups
 col_2groups = wes_palettes$Royal1[2:1]

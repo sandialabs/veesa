@@ -131,7 +131,7 @@ compute_pfi <- function(x, y, f, K, metric, eps = 1e-15) {
     .x = pK$p,
     .y = pK$K,
     .f = function(p, K) {
-      xtildep = sample(x[, p], n, F)
+      xtildep = sample(x[, p], size = n, replace = FALSE)
       xtilde = x
       xtilde[, p] = xtildep
       if (metric == "accuracy") {
@@ -145,7 +145,7 @@ compute_pfi <- function(x, y, f, K, metric, eps = 1e-15) {
     }
   ) %>%
     unlist() %>%
-    matrix(nrow = K, ncol = p, byrow = T)
+    matrix(nrow = K, ncol = p, byrow = TRUE)
 
   # Compute PFI
   list(pfi = m - (colSums(mpk_matrix) / K), pfi_single_reps = m - mpk_matrix)

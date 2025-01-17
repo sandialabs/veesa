@@ -31,7 +31,7 @@ library(veesa)
 library(wesanderson)
 
 # Specify the conda environment to use - create environment using veesa_env.yml
-use_condaenv(condaenv = "veesa", required = T)
+use_condaenv(condaenv = "veesa", required = TRUE)
 
 # Specify colors for groups
 col_2groups = wes_palettes$Royal1[2:1]
@@ -1055,7 +1055,7 @@ if (!file.exists(inkjet_fp)) {
     arrange(printer, color, sample)
 
   # Save cleaned data
-  write.csv(inkjet, inkjet_fp, row.names = F)
+  write.csv(inkjet, inkjet_fp, row.names = FALSE)
 
 }
 
@@ -1094,14 +1094,14 @@ if (!file.exists(inkjet_folds_fp)) {
               distinct(printer, sample) |>
               filter(printer == p) |>
               mutate(rep = r) |>
-              mutate(fold = sample(inkjet_fold_ids, length(inkjet_fold_ids), replace = F))
+              mutate(fold = sample(inkjet_fold_ids, length(inkjet_fold_ids), replace = FALSE))
           }
         )
       }
     )
 
   # Save data with CV folds as CSV
-  write.csv(inkjet_folds, inkjet_folds_fp, row.names = F)
+  write.csv(inkjet_folds, inkjet_folds_fp, row.names = FALSE)
 
 }
 
@@ -1369,10 +1369,10 @@ if (!file.exists(inkjet_cv_acc_fp) | !file.exists(inkjet_cv_acc_summary_fp)) {
     mutate_at(.vars = vars(acc_ave:acc_max), .funs = round, digits = 4)
 
   # Save test fold accuracies (and best/worst scenarios)
-  write.csv(inkjet_cv_acc, inkjet_cv_acc_fp, row.names = F)
-  write.csv(inkjet_cv_acc_summary, inkjet_cv_acc_summary_fp, row.names = F)
-  write.csv(inkjet_res_best, inkjet_res_best_fp, row.names = F)
-  write.csv(inkjet_res_worst, inkjet_res_worst_fp, row.names = F)
+  write.csv(inkjet_cv_acc, inkjet_cv_acc_fp, row.names = FALSE)
+  write.csv(inkjet_cv_acc_summary, inkjet_cv_acc_summary_fp, row.names = FALSE)
+  write.csv(inkjet_res_best, inkjet_res_best_fp, row.names = FALSE)
+  write.csv(inkjet_res_worst, inkjet_res_worst_fp, row.names = FALSE)
 
 }
 
@@ -1480,8 +1480,8 @@ if (!file.exists(inkjet_paper_res_fp)) {
     filter(acc_min == max(acc_min), .by = color)
 
   # Save results from Buzzini paper
-  write.csv(inkjet_paper_res, inkjet_paper_res_fp, row.names = F)
-  write.csv(inkjet_paper_res_best, inkjet_paper_res_best_fp, row.names = F)
+  write.csv(inkjet_paper_res, inkjet_paper_res_fp, row.names = FALSE)
+  write.csv(inkjet_paper_res_best, inkjet_paper_res_best_fp, row.names = FALSE)
 
 }
 

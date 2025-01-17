@@ -56,7 +56,7 @@
 #'   select(data, group, id) |>
 #'   distinct() |>
 #'   group_by(data, group) |>
-#'   slice(1:3) |>
+#'   slice(1:4) |>
 #'   ungroup()
 #'
 #' # Create a smaller version of shifted data
@@ -137,14 +137,14 @@ prep_training_data <- function(
       id = id,
       C = C,
       ci = ci,
-      showplot = F
+      showplot = FALSE
     )
   } else if (fpca_method == "hfpca") {
     fpca_res = fdasrvf::horizFPCA(
       warp_data = aligned,
       no = length(time),
       ci = ci,
-      showplot = F
+      showplot = FALSE
     )
   } else if (fpca_method == "vfpca") {
     fpca_res = fdasrvf::vertFPCA(
@@ -152,7 +152,7 @@ prep_training_data <- function(
       no = length(time),
       id = id,
       ci = ci,
-      showplot = F
+      showplot = FALSE
     )
   } else {
     stop("fpca_method specified incorrectly. Must be 'jfpca', 'vfpca', or 'hfpca'.")

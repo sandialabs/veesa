@@ -14,7 +14,7 @@ plot_pc_directions(
   nrow = 1,
   linesizes = NULL,
   linetype = TRUE,
-  freey = F
+  freey = FALSE
 )
 }
 \arguments{
@@ -55,7 +55,7 @@ sub_ids <-
   select(data, group, id) |>
   distinct() |>
   group_by(data, group) |>
-  slice(1:5) |>
+  slice(1:4) |>
   ungroup()
 
 # Create a smaller version of shifted data

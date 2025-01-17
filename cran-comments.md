@@ -2,20 +2,13 @@
 
 This is a resubmission. In this version I have:
 
-* Adjusted the arXiv reference for technical details in the Description field 
-  to the recommended format (<doi:10.48550/arXiv.YYMM.NNNNN> instead of 
-  <arXiv:YYMM.NNNNN>).
+* Addressed the following comment: "It seems like you have too many spaces in
+  your description field. Probably because linebreaks count as spaces too. 
+  Please remove unecassary ones." I removed linebreaks in the description field.
   
-* Dealt with Possibly misspelled words in DESCRIPTION:
-    VEESA (9:29)
-    al (14:52)
-    et (14:49)
-    vertial (12:3)
-  Replaced VEESA with the spelled out version of the pipeline (Variable 
-  importance Explainable Elastic Shape Analysis).
-  Added '.' after al to be grammatically correct.
-  et all is okay as is.
-  Added the missing 'c' to vertical.
+* Addressed the following comment: "Please write TRUE and FALSE instead of T 
+  and F. Please don't use "T" or "F" as vector names." I replaced all instances
+  of T and F with TRUE and FALSE.
 
 ## R CMD check results
 
