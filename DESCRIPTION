@@ -1,7 +1,7 @@
 Package: veesa
 Type: Package
 Title: Pipeline for Explainable Machine Learning with Functional Data
-Version: 0.1.6
+Version: 0.1.6.9
 Authors@R: c(
   person("Katherine", "Goode", email = "kjgoode@sandia.gov", role = c("cre", "aut")),
   person("J. Derek", "Tucker", email = "jftuck@sandia.gov", role = c("aut")),
