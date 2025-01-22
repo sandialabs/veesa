@@ -15,3 +15,6 @@
 ^\src\*.o
 ^\src\*.so
 ^veesa\.Rproj$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
