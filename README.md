@@ -3,6 +3,8 @@ VEESA R Package
 
 <!-- badges: start -->
 
+[![CRAN
+status](https://www.r-pkg.org/badges/version/veesa)](https://CRAN.R-project.org/package=veesa)
 [![R-CMD-check](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sandialabs/veesa/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/sandialabs/veesa/graph/badge.svg)](https://app.codecov.io/gh/sandialabs/veesa)

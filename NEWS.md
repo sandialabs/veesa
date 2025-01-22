@@ -1,3 +1,12 @@
+# veesa 0.1.5
+
+- Resubmission to CRAN with more fixes
+- Made it to CRAN
+
+# veesa 0.1.5
+
+- Resubmission to CRAN with fixes
+
 # veesa 0.1.4
 
 - Initial CRAN submission!
