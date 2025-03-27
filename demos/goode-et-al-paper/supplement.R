@@ -1,4 +1,4 @@
-## ----setup, include = FALSE------------------------
+## ----setup, include = FALSE----------------------------------------------------------------------------------------------
 
 # R markdown options
 knitr::opts_chunk$set(
@@ -28,7 +28,7 @@ library(veesa)
 library(wesanderson)
 
 # Specify the conda environment to use
-use_condaenv(condaenv = "veesa", required = TRUE)
+use_condaenv(condaenv = "veesa", required = T)
 
 # Specify colors for groups
 col_2groups = wes_palettes$Royal1[2:1]
@@ -42,7 +42,8 @@ col_minus2 = "#EBBC88"
 col_minus3 = "#F3DABC"
 col_pcdir_2sd = c(col_plus2, col_plus1, "black", col_minus1, col_minus2)
 col_pcdir_3sd = c(col_plus3, col_plus2, col_plus1, "black", col_minus1, col_minus2, col_minus3)
- 
+col_5groups = wes_palette(name = "Royal1", n = 5, type = "continuous")[c(1,2,3,5,4)] 
+
 # Specify inkjet colors
 col_inkjet = c("#0EB4AD", "#8f1883", "#d9c004")
 
@@ -59,7 +60,7 @@ fp = "~/OneDrive - Sandia National Laboratories/Documents/projects/veesa/"  # kj
 # fp = "~/veesa/"
 
 
-## ----shifted-peaks-data----------------------------
+## ----shifted-peaks-data--------------------------------------------------------------------------------------------------
 # Load the sim data
 shifted_peaks_data = shifted_peaks$data |> mutate(group = factor(group))
 
@@ -106,7 +107,7 @@ shifted_peaks_test_model_data <-
 shifted_peaks_K = 10
 
 
-## ----shifted-peaks-true-means----------------------
+## ----shifted-peaks-true-means--------------------------------------------------------------------------------------------
 # # Specify parameters
 # z1 = 1; z1_sd = 0.05; a1 = -3; a1_sd = 1
 # z2 = 1.25; z2_sd = 0.05; a2 = 3; a2_sd = 1
@@ -133,7 +134,7 @@ shifted_peaks_true_means <- shifted_peaks$true_means
   # rename(mean_true = y)
 
 
-## ----shifted-peaks-cross-sectional-----------------
+## ----shifted-peaks-cross-sectional---------------------------------------------------------------------------------------
 # Prepare cross-sectional data
 shifted_peaks_data_cs_train = shifted_peaks_train_wide %>% select(-id, -data) %>% mutate(group = factor(group))
 shifted_peaks_data_cs_test = shifted_peaks_test_wide %>% select(-id, -data) %>% mutate(group = factor(group))
@@ -196,7 +197,7 @@ if (file.exists(shifted_peaks_pfi_ll_cs_fp)) {
 }
 
 
-## ----shifted-peaks-jfpca---------------------------
+## ----shifted-peaks-jfpca-------------------------------------------------------------------------------------------------
 # Random forest on jfPCA with aligned data
 shifted_peaks_rf_jfpca_fp = paste0(fp, "results/shifted-peaks/shifted-peaks-rf-jfpca.rds")
 shifted_peaks_rf_jfpca = readRDS(shifted_peaks_rf_jfpca_fp)
@@ -231,12 +232,12 @@ shifted_peaks_jfpca_aligned_fp = paste0(fp, "data/shifted-peaks/shifted-peaks-jf
 shifted_peaks_jfpca_aligned = readRDS(shifted_peaks_jfpca_aligned_fp)
 
 
-## ----shifted-peaks-check---------------------------
+## ----shifted-peaks-check-------------------------------------------------------------------------------------------------
 if (data.frame(shifted_peaks_pfi_acc_cs$pfi_single_reps) %>% summarise_all(.funs = sd) %>% as.numeric() %>% unique() > 0)
   stop("Some times have PFI standard deviation > 0.")
 
 
-## ----shifted-peaks-pfi-cutoff----------------------
+## ----shifted-peaks-pfi-cutoff--------------------------------------------------------------------------------------------
 shifted_peaks_veesa_pfi_cutoff = 0.02
 
 
@@ -467,7 +468,7 @@ plot_pc_directions(
   labs(x = TeX('$t$'), y = TeX('$y_g(t)$'))
 
 
-## ----hct-load-res----------------------------------
+## ----hct-load-res--------------------------------------------------------------------------------------------------------
 
 # Load subset of training data
 hct_train_sub = py_load_object(paste0(fp, "data/hct/hct-sub-train.pkl"))
@@ -547,7 +548,7 @@ hct_pred_and_metrics_cs_post_align <-
 
 
 
-## ----hct-cv-metrics--------------------------------
+## ----hct-cv-metrics------------------------------------------------------------------------------------------------------
 
 # Prepare metrics for plotting 
 hct_pred_and_metrics_train_df <-
@@ -599,7 +600,7 @@ hct_pred_and_metrics_cs_post_align_df <-
 
 
 
-## ----hct-pfi-pcs-----------------------------------
+## ----hct-pfi-pcs---------------------------------------------------------------------------------------------------------
 # Function for identifying a certain number of top jfPCs
 get_top_vars <- function(pfi, nvars) {
   data.frame(pfi_mean = pfi$importances_mean) |>
@@ -682,7 +683,73 @@ bind_rows(
   ylim(0.5,1)
 
 
-## ----figS5, fig.width = 12, fig.height = 8, out.width = '5.5in', fig.cap = "PFI replicate values for jfPCA (top) and vfPCA (bottom) associated with the H-CT material classification example.", warning = FALSE----
+## ----figS5,fig.width = 15, fig.height = 3.5, out.width = '6.5in', fig.cap = "\\emph{H-CT Data jfPC Metrics.} Proportion of variation and PFI values associated with jfPCs. jfPCs with the 6 highest PFI values are labeled and colored.", warning = FALSE----
+
+# Specify the figure font size
+f7_fs = 16
+
+# Get jfPCA prop vars
+hct_prop_var_jfpca <-
+  data.frame(latent = hct_train_jfpca_latent) |>
+  mutate(index = 1:n(),
+         prop_var = (latent^2) / (sum(latent^2)))
+
+# Prepare proportion of variability and PFI for jfPCA for plotting 
+hct_pv_pfi <-
+  hct_prop_var_jfpca |>
+  mutate(fpca = "Joint fPCA", pfi = hct_jfpca_nn_pfi$importances_mean) |>
+  select(-latent) |>
+  rename(fpc = index) |>
+  pivot_longer(cols = -c(fpc, fpca), names_to = "variable") |>
+  mutate(
+    variable = fct_relevel(variable, "prop_var", "pfi"),
+    variable = fct_recode(
+      variable,
+      "Proportion of \nVariation" = "prop_var",
+      "PFI" = "pfi"
+    )
+  )
+
+# Prepare labels
+hct_pfi_labels <-
+  hct_pv_pfi |>
+  filter(variable == "PFI") |>
+  filter(fpc %in% hct_top_jfpcs) |>
+  mutate(label_x = fpc, label_y = value, label_id = 1:n()) |>
+  mutate(label_x = ifelse(label_id == 1, label_x - 3, label_x)) |>
+  mutate(label_y = ifelse(label_id == 2, label_y + 0.02, label_y)) |>
+  mutate(label_x = ifelse(label_id == 2, label_x - 2, label_x)) |>
+  mutate(label_y = ifelse(label_id == 3, label_y + 0.01, label_y)) |>
+  mutate(label_x = ifelse(label_id == 3, label_x + 3.5, label_x)) |>
+  mutate(label_y = ifelse(label_id == 4, label_y + 0.01, label_y)) |>
+  mutate(label_y = ifelse(label_id == 5, label_y + 0.01, label_y)) |>
+  mutate(label_y = ifelse(label_id == 6, label_y + 0.01, label_y))
+
+# Create plots of proportion of variation explained and PFI values
+left_join(hct_pv_pfi, hct_pfi_labels, by = join_by(fpc, fpca, variable, value)) |>
+  mutate(has_label = ifelse(is.na(label_x), F, T)) |>
+  ggplot(aes(x = fpc, y = value)) +
+  geom_segment(aes(xend = fpc, yend = 0, color = has_label), size = 0.75) +
+  facet_wrap(. ~ variable, scales = "free_y", switch = "y") +
+  geom_text(aes(x = label_x, y = label_y, label = fpc, color = has_label),
+            size = f7_fs / 3) +
+  labs(x = "Principal Component") +
+  scale_color_manual(values = c("black", col_5groups[1])) +
+  theme_bw(base_family = ff, base_size = f7_fs) +
+  theme(
+    strip.placement = "outside",
+    strip.background =
+      element_rect(color = "white", fill = "white"),
+    axis.title.y = element_blank(),
+    axis.title.x = element_text(size = f7_fs),
+    axis.text = element_text(size = f7_fs),
+    title = element_text(size = f7_fs),
+    strip.text = element_text(size = f7_fs), 
+    legend.position = "none"
+  )
+
+
+## ----figS6, fig.width = 12, fig.height = 8, out.width = '5.5in', fig.cap = "PFI replicate values for jfPCA (top) and vfPCA (bottom) associated with the H-CT material classification example.", warning = FALSE----
 
 # Specify the figure font size
 fS5_fs = 20
@@ -708,7 +775,7 @@ hct_pfi |>
   scale_color_manual(values = wes_palettes$Zissou1[5:1])
 
 
-## ----figS6, fig.width = 16, fig.height = 12, out.width = "6.5in", fig.cap = "Principal directions from the six jfPCs with the highest PFI from the H-CT material classification example."----
+## ----figS7, fig.width = 16, fig.height = 12, out.width = "6.5in", fig.cap = "Principal directions from the six jfPCs with the highest PFI from the H-CT material classification example."----
 
 # Specify the figure font size
 fS6_fs = 18.5
@@ -750,7 +817,7 @@ plot_pc_directions(
   )
 
 
-## ----inkjet-load-data-and-res----------------------
+## ----inkjet-load-data-and-res--------------------------------------------------------------------------------------------
 
 # Load inkjet data
 inkjet = read.csv(paste0(fp, "data/inkjet/inkjet-cleaned.csv"))
@@ -780,9 +847,14 @@ inkjet_pfi_worst = py_load_object(paste0(fp, "results/inkjet/inkjet-pfi-worst.pk
 # Load CV scenarios
 inkjet_smooth_rep_fold_color_list = readRDS(paste0(fp, "results/inkjet/inkjet-cv-srfc.rds"))
 
+# Best and worst results
+inkjet_res_best_fp = paste0(fp, "results/inkjet/inkjet-cv-res-best.csv")
+inkjet_res_worst_fp = paste0(fp, "results/inkjet/inkjet-cv-res-worst.csv")
+inkjet_res_best = read.csv(inkjet_res_best_fp)
+inkjet_res_worst = read.csv(inkjet_res_worst_fp)
 
 
-## ----inkjet-improve-worst--------------------------
+## ----inkjet-improve-worst------------------------------------------------------------------------------------------------
 
 # Specify a file path
 inkjet_cv_preds_pfi_informed_fp = paste0(fp, "results/inkjet/inkjet-cv-preds-pfi-informed.rds")
@@ -913,7 +985,93 @@ inkjet_cv_acc_pfi_informed_summary <-
 
 
 
-## ----figS7, fig.height = 18, fig.width = 18, out.width = "5.25in", fig.cap = "Confusion matrices for the inkjet printer random forests."----
+## ----figS8, fig.height = 9, fig.width = 22, out.width = "6.5in", fig.cap = "\\emph{Inkjet Data Cross Validation Average Accuracies.} Triangles pointing up and down highlight the highest and lowest average cross validation accuracies from the VEESA pipeline, respectively, for each color. Horizontal dashed lines represent best average cross validation accuracies for each color from Buzzini et al. (2021)."----
+
+# Specify the figure font size
+f10_fs = 26
+
+inkjet_cvs_for_plot <-
+  inkjet_cv_acc_summary |>
+  mutate(s = factor(s)) |>
+  mutate(ntrees = paste(ntrees, "trees")) |>
+  mutate(ntrees = factor(ntrees, levels = paste(c("50", "100", "250", "500", "1000"), "trees")))
+
+inkjet_res_best_for_plot <-
+  inkjet_res_best |>
+  mutate(ntrees = paste(ntrees, "trees")) |>
+  mutate(ntrees = factor(ntrees, levels = paste(c("50", "100", "250", "500", "1000"), "trees")))
+
+inkjet_res_worst_for_plot <-
+  inkjet_res_worst |>
+  mutate(ntrees = paste(ntrees, "trees")) |>
+  mutate(ntrees = factor(ntrees, levels = paste(c("50", "100", "250", "500", "1000"), "trees")))
+
+ggplot() +
+  geom_hline(
+    data = inkjet_paper_res_best,
+    mapping = aes(yintercept = acc_ave),
+    linewidth = 0.5,
+    linetype = "dashed"
+  ) +
+  geom_line(
+    data = inkjet_cvs_for_plot,
+    mapping = aes(
+      x = pcs,
+      y = acc_ave,
+      color = s
+    )
+  ) +
+  geom_point(
+    data = inkjet_cvs_for_plot,
+    mapping = aes(
+      x = pcs,
+      y = acc_ave,
+      color = s
+    )
+  ) +
+  geom_point(
+    data = inkjet_res_best_for_plot,
+    mapping = aes(
+        x = pcs,
+        y = acc_ave
+      ),
+    color = "black",
+    fill = "black",
+    size = 5,
+    shape = 24,
+    alpha = 0.5
+  ) +
+  geom_point(
+    data = inkjet_res_worst_for_plot,
+    mapping = aes(
+        x = pcs,
+        y = acc_ave
+      ),
+    color = "black",
+    fill = "black",
+    size = 5,
+    shape = 25,
+    alpha = 0.5
+  ) +
+  facet_grid(color ~ ntrees) +
+  scale_color_manual(values = wes_palette(name = "Zissou1", n = 16, type = "continuous")[c(1:3,8:9,12:15)]) +
+  theme_bw(base_size = 20) +
+  theme(
+    strip.background = element_blank(),
+    axis.title = element_text(size = f10_fs),
+    axis.text = element_text(size = f10_fs),
+    title = element_text(size = f10_fs),
+    strip.text = element_text(size = f10_fs),
+    legend.text = element_text(size = f10_fs),
+    legend.title = element_text(size = f10_fs)
+  ) +
+  labs(
+    x = "Number of PCs",
+    y = "Accuracy"
+  )
+
+
+## ----figS9, fig.height = 18, fig.width = 18, out.width = "5.25in", fig.cap = "Confusion matrices for the inkjet printer random forests."----
 
 # Specify the figure font size
 fS7_fs = 24
@@ -1025,7 +1183,7 @@ plot_grid(
 )
 
 
-## ----figS8, fig.height = 15, fig.width = 25, out.width = "6.5in", fig.cap = "Principal directions from the best (top row) and worst (bottom row) models for predictions with magenta inkjet signatures. The jfPCs selected are those with the largest PFI values for their respective model. PCs are ordered from left to right based on highest to lowest feature importance."----
+## ----figS10, fig.height = 15, fig.width = 25, out.width = "6.5in", fig.cap = "Principal directions from the best (top row) and worst (bottom row) models for predictions with magenta inkjet signatures. The jfPCs selected are those with the largest PFI values for their respective model. PCs are ordered from left to right based on highest to lowest feature importance."----
 
 # Specify the figure font size
 fS8_fs = 28
@@ -1094,7 +1252,7 @@ plot_grid(
 
 
 
-## ----figS9, fig.height = 15, fig.width = 25, out.width = "6.5in", fig.cap = "Principal directions from the best (top row) and worst (bottom row) models for predictions with yellow inkjet signatures. The jfPCs selected are those with the largest PFI values for their respective model. PCs are ordered from left to right based on highest to lowest feature importance."----
+## ----figS11, fig.height = 15, fig.width = 25, out.width = "6.5in", fig.cap = "Principal directions from the best (top row) and worst (bottom row) models for predictions with yellow inkjet signatures. The jfPCs selected are those with the largest PFI values for their respective model. PCs are ordered from left to right based on highest to lowest feature importance."----
 
 inkjet_yellow_best_pc_dirs <-
   plot_inkjet_pcs(inkjet_pfi_best[[3]]) +
@@ -1120,7 +1278,7 @@ plot_grid(
 
 
 
-## ----figS10, fig.height = 8, fig.width = 20, out.width = "6.5in", fig.cap = "Cross validation average accuracies. Black lines represent CV accuracies from models with PC selected via PFI."----
+## ----figS12, fig.height = 8, fig.width = 20, out.width = "6.5in", fig.cap = "Cross validation average accuracies. Black lines represent CV accuracies from models with PC selected via PFI."----
 
 # Specify the figure font size
 fS10_fs = 22
