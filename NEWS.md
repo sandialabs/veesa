@@ -1,4 +1,8 @@
-# veesa 0.1.5
+# veesa 0.1.7
+
+- Added a function for plotting the differences between the PC directions and the mean
+
+# veesa 0.1.6
 
 - Resubmission to CRAN with more fixes
 - Made it to CRAN
