@@ -1,0 +1,96 @@
+---
+title: "Code Associated with Explainable Machine Learning for Functional Data"
+subtitle: "Generating Toy H-CT Data to Run Code"
+output: pdf_document
+---
+
+The real H-CT data is not able to be shared for proprietary reasons. Here, we simulate example data for running the remainder of the H-CT code. The frequencies match the H-CT data, but the number of functions are much less than in the real H-CT data in order to greatly decrease the amount of time to run the code. Also, note that the data simulated here is toy data, so the results obtained using this code will not match those in the paper.
+
+```{r setup, message = FALSE}
+# R markdown options
+knitr::opts_chunk$set(
+   message = FALSE,
+   fig.align = "center",
+   dpi = 600,
+   warning = FALSE,
+   error = FALSE
+)
+knitr::opts_knit$set(eval.after = "fig.cap")
+
+# Load packages
+library(dplyr)
+library(ggplot2)
+library(reticulate)
+
+# Specify the conda environment to use
+# Create environment using veesa_env.yml
+use_condaenv(condaenv = "veesa", required = T)
+
+# Specify a file path
+# Assumes the working directory is the location of this script (code/)
+fp = "../"
+```
+
+```{r hct-setup}
+# Materials and number of materials
+hct_materials = c("explosive", "h2o", "hp10", "hp50", "hp100")
+hct_n_materials = length(hct_materials)
+
+# Specify the number of functions
+hct_n_funs = 1000 
+
+# Specify the number of frequencies and create the frequencies
+hct_n_freq = 128
+hct_freq = seq(from = 0, to = 1, length.out = hct_n_freq)
+```
+
+```{r hct-generate-data}
+# Generate the data
+hct_data_fp = paste0(fp, "data/hct-clean-example.pkl")
+if (file.exists(hct_data_fp)) {
+  hct_data = py_load_object(hct_data_fp)
+} else {
+  set.seed(20251202)
+  hct_data <-
+    data.frame(
+      dataset = rep(
+        x = c("train", "test"), 
+        each = (hct_n_funs / hct_n_materials) * hct_n_freq / 2
+      ),
+      id = rep(1:hct_n_funs, each = hct_n_freq),
+      material = rep(
+        hct_materials, 
+        each = (hct_n_funs / hct_n_materials) * hct_n_freq
+      ),
+      frequency = 1:hct_n_freq,
+      frequency_norm = hct_freq
+    ) |>
+    mutate(
+      value = c(
+        rep(sin((hct_freq)*9), hct_n_funs / hct_n_materials),
+        rep(sin((hct_freq + 0.05)*9), hct_n_funs / hct_n_materials),
+        rep(sin((hct_freq + 0.1)*9), hct_n_funs / hct_n_materials),
+        rep(sin((hct_freq + 0.15)*9), hct_n_funs / hct_n_materials),
+        rep(sin((hct_freq + 0.2)*9), hct_n_funs / hct_n_materials)
+      )
+    ) |> 
+    mutate(amp = rep(rnorm(hct_n_funs, 0, 1), each = 128)) |>
+    mutate(value = value + amp) |>
+    mutate(error = rnorm(hct_n_funs * hct_n_freq, 0, 0.3)) |> 
+    mutate(value = value + error) |> 
+    select(-error, -amp)
+  py_save_object(hct_data, hct_data_fp)
+}
+```
+
+```{r hct-preview-data, fig.width = 10, fig.height = 10, out.width="6in"}
+# View the data
+hct_data |> 
+  ggplot(aes(x = frequency_norm, y = value, group = id, color = material)) + 
+  geom_line(linewidth = 0.2, alpha = 0.3) + 
+  facet_grid(material ~ dataset) + 
+  theme_light(base_size = 14) + 
+  theme(legend.position = "none") +
+  scale_color_manual(values = wesanderson::wes_palettes$Darjeeling2) + 
+  labs(x = "Frequency", y = "Intensity")
+```

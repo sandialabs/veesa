@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+# Contains: Cross-sectional approach (pre-smoothing) to modeling H-CT data
+# Working Directory: The location of this script (code/hct-extra)
+
+# Load packages
+import numpy as np
+import veesa_functions as veesa
+import pickle
+from sklearn.inspection import permutation_importance
+from sklearn.metrics import accuracy_score
+
+# Specify file paths
+fp_data = "../../data/"
+fp_res = "../../results/hct/"
+
+# Load training and testing data
+train = pickle.load(open(fp_data + "hct-train.pkl", "rb"))
+test = pickle.load(open(fp_data + "hct-test.pkl", "rb"))
+
+# Prepare response variables
+train_y = train[["id","material"]].drop_duplicates()["material"]
+test_y = test[["id","material"]].drop_duplicates()["material"]
+
+# Prepare features
+train_x = np.array(
+  train[["id","frequency","value"]].pivot(index = "id", columns = "frequency")
+)
+test_x = np.array(
+  test[["id","frequency","value"]].pivot(index = "id", columns = "frequency")
+)
+
+# Train neural network, compute performance metrics, and save results
+veesa.apply_model(
+  x=train_x, 
+  y=train_y, 
+  analysis_name="cs-pre-smooth", 
+  sparam=0,
+  folder_path=fp_res,
+  seed=20211213
+)
+
+# Load the model
+nn = veesa.load_object(
+  folder_path=fp_res, 
+  train_test="train", 
+  stage="nn-cs-pre-smooth", 
+  sparam=0
+)
+
+# Apply PFI
+pfi = permutation_importance(
+  estimator=nn, 
+  X=train_x, 
+  y=train_y,
+  scoring="accuracy", 
+  n_repeats=5, 
+  n_jobs=5, 
+  random_state=20211213
+)
+
+# Save PFI results
+veesa.save_object(
+  obj=pfi,
+  folder_path=fp_res, 
+  train_test="train", 
+  stage="pfi-cs-pre-smooth",
+  sparam=0
+)
+
+# Get predictions and accuracy on test data
+test_pred = nn.predict(X = test_x)
+test_acc = accuracy_score(y_true = test_y, y_pred = test_pred)
+
+# Join the predictions and metrics in a dictionary (and save results)
+test_res = {"preds": test_pred, "acc": test_acc}
+veesa.save_object(
+  obj=test_res,
+  folder_path=fp_res, 
+  train_test="test", 
+  stage="pred-and-metrics-cs-pre-smooth", 
+  sparam=0
+)
