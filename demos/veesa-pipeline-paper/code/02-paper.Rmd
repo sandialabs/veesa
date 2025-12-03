@@ -19,9 +19,8 @@ knitr::opts_chunk$set(
 )
 knitr::opts_knit$set(eval.after = "fig.cap")
 
-# Using v0.1.7 of veesa R package. For now, this version is only on github. 
-# Uncomment line below to install from github:
-#remotes::install_github("sandialabs/veesa")
+# Using v0.1.7 of veesa R package. Uncomment line below to install from CRAN:
+#install_version("veesa", version = "0.1.7")
 
 # Load packages
 library(cowplot)

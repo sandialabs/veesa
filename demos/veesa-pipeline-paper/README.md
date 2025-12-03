@@ -1,4 +1,4 @@
-# Information on Supplementary Code and Data for 'Explainable Machine Learning for Functional Data'
+# Information on Supplementary Files for 'Explainable Machine Learning for Functional Data'
 
 ## `code/`
 
@@ -15,8 +15,17 @@ Contains the code associated with manuscript. Run the files in the following ord
 
 Contains the data needed to run the code.
 
-- `hct-clean-example.pkl`: Contains example data for running the H-CT analysis code. (For proprietary reasons, it is not possible to provide the real H-CT data.)
+- `hct-clean-example.pkl`: Contains example data for running the H-CT analysis code. (For proprietary reasons, it is not possible to provide the real H-CT data.) This data can also be generated using `01-generate-hct-example-data.Rmd`.
 - `RamanInkjet_PrelDataNoBsln1CYANrows.csv`: Raw (cyan) inkjet data. Provided by Patrick Buzzini.
 - `RamanInkjet_PrelDataNoBsln2MAGENTArows.csv`: Raw (magenta) inkjet data. Provided by Patrick Buzzini.
 - `RamanInkjet_PrelDataNoBsln3YELLOWrows.csv`:  Raw (yellow) inkjet data. Provided by Patrick Buzzini.
-- `shifted-peaks.csv`: Contains the 'shifted peaks' data. Note that this data is also available directly from the `veesa` R package. Thus, the code never directly reads in this file, but it is included here as a copy.
+- `shifted-peaks.csv`: Contains the 'shifted peaks' data. Note that this data is also available directly from the `veesa` R package. The code never directly reads in this file, but it is included here as a copy.
+
+## `supplement.pdf`
+
+Supplemental document referenced in the main manuscript. Contains results from additional analyses.
+
+## `veesa-0.1.7.zip`
+
+A copy of version 0.1.7 of the `veesa` R package. This code is also available 
+on CRAN and GitHub at https://github.com/sandialabs/veesa.
