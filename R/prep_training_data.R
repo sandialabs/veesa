@@ -33,8 +33,7 @@
 #'
 #' @export prep_training_data
 #'
-#' @importFrom fdasrvf f_to_srvf horizFPCA jointFPCA vertFPCA optimum.reparam
-#'             time_warping warp_f_gamma
+#' @importFrom fdasrvf f_to_srvf horizFPCA jointFPCA vertFPCA optimum.reparam time_warping warp_f_gamma
 #' @importFrom purrr map map2
 #'
 #' @returns List with three objects:
