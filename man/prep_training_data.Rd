@@ -9,12 +9,12 @@ prep_training_data(
   time,
   fpca_method,
   lambda = 0,
-  penalty_method = c("roughness", "geodesic", "norm"),
+  penalty_method = c("roughness", "l2gam", "l2psi", "geodesic", "none", "norm"),
   centroid_type = c("mean", "median"),
   center_warpings = TRUE,
   parallel = FALSE,
   cores = -1,
-  optim_method = c("DP", "DPo", "DP2", "RBFGS"),
+  optim_method = c("DP", "DPo", "RBFGS"),
   max_iter = 20L,
   id = NULL,
   C = NULL,
@@ -31,12 +31,16 @@ method to use. Options are 'jfpca', 'hfpca', or 'vfpca'.}
 
 \item{lambda}{Numeric value specifying the elasticity. Default is 0.}
 
-\item{penalty_method}{String specifying the penalty term used in the
-formulation of the cost function to minimize for alignment. Choices
-are "roughness" which uses the norm of the second derivative,
-"geodesic" which uses the geodesic distance to the identity and
-"norm" which uses the Euclidean distance to the identity. Defaults
-is "roughness".}
+\item{penalty_method}{A string specifying the penalty term used in the
+formulation of the cost function to minimize for alignment. Choices are
+`"roughness"` which uses the norm of the second derivative, `"l2gam"`
+which uses the \eqn{L^2} distance of the warping function to the identity,
+`"l2psi"` which uses the \eqn{L^2} distance of the SRVF of the warping
+function to that of the identity, `"geodesic"` which uses the geodesic
+distance to the identity, and `"none"` which applies no penalty. `"norm"`
+is kept for backward compatibility as an alias for `"l2gam"`. The penalty
+is weighted by `lambda`, so it has no effect when `lambda = 0`. Defaults
+to `"roughness"`.}
 
 \item{centroid_type}{String specifying the type of centroid to align to.
 Options are "mean" or "median". Defaults is "mean".}
@@ -51,7 +55,7 @@ Defaults is FALSE.}
 -1, which uses all cores.}
 
 \item{optim_method}{Method used for optimization when computing the Karcher
-mean. Options are "DP", "DPo", and "RBFGS".}
+mean. Choices are `"DP"`, `"DPo"`, and `"RBFGS"`. Defaults to `"DP"`.}
 
 \item{max_iter}{An integer value specifying the maximum number of iterations.
 Defaults to 20L.}
