@@ -6,42 +6,52 @@ export(plot_pc_directions)
 export(prep_testing_data)
 export(prep_training_data)
 export(simulate_functions)
-importFrom(dplyr,"%>%")
-importFrom(dplyr,arrange)
-importFrom(dplyr,distinct)
-importFrom(dplyr,group_by)
-importFrom(dplyr,left_join)
-importFrom(dplyr,mutate)
-importFrom(dplyr,n)
-importFrom(dplyr,pull)
-importFrom(dplyr,rename)
-importFrom(dplyr,select)
-importFrom(fdasrvf,f_to_srvf)
-importFrom(fdasrvf,gradient)
-importFrom(fdasrvf,horizFPCA)
-importFrom(fdasrvf,jointFPCA)
-importFrom(fdasrvf,optimum.reparam)
-importFrom(fdasrvf,time_warping)
-importFrom(fdasrvf,vertFPCA)
-importFrom(fdasrvf,warp_f_gamma)
+importFrom(dplyr,
+  "%>%",
+  arrange,
+  distinct,
+  group_by,
+  left_join,
+  mutate,
+  n,
+  pull,
+  rename,
+  select
+)
+importFrom(fdasrvf,
+  f_to_srvf,
+  gradient,
+  horizFPCA,
+  jointFPCA,
+  optimum.reparam,
+  time_warping,
+  vertFPCA,
+  warp_f_gamma
+)
 importFrom(forcats,fct_relevel)
-importFrom(ggplot2,.data)
-importFrom(ggplot2,aes)
-importFrom(ggplot2,facet_wrap)
-importFrom(ggplot2,geom_line)
-importFrom(ggplot2,ggplot)
-importFrom(ggplot2,labs)
-importFrom(ggplot2,scale_linetype_manual)
-importFrom(ggplot2,scale_size_manual)
-importFrom(ggplot2,theme_bw)
-importFrom(purrr,map)
-importFrom(purrr,map2)
-importFrom(purrr,map_dbl)
-importFrom(purrr,map_df)
-importFrom(purrr,pmap)
-importFrom(stats,approx)
-importFrom(stats,predict)
-importFrom(stats,runif)
-importFrom(stats,setNames)
+importFrom(ggplot2,
+  .data,
+  aes,
+  facet_wrap,
+  geom_line,
+  ggplot,
+  labs,
+  scale_linetype_manual,
+  scale_size_manual,
+  theme_bw
+)
+importFrom(purrr,
+  map,
+  map2,
+  map_dbl,
+  map_df,
+  pmap
+)
+importFrom(stats,
+  approx,
+  predict,
+  runif,
+  setNames
+)
 importFrom(stringr,str_replace)
 importFrom(tidyr,pivot_longer)
