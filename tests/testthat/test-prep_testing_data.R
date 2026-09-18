@@ -124,6 +124,8 @@ test_that("Function accepts an explicit alignment penalty", {
   )
   expect_type(result, "list")
   expect_equal(dim(result$coef), c(nrow(mock_f), ncol(mock_f)))
+  expect_equal(result$call$lambda, 0.01)
+  expect_equal(result$call$penalty_method, "l2gam")
 })
 
 # Test 7: Check for correct output when using different optimization methods
@@ -144,4 +146,58 @@ test_that("Function works with different optimization methods", {
     )
   expect_type(result_dp, "list")
   expect_type(result_dpo, "list")
+})
+
+# Test 8: Check that the alignment penalty is inherited from the training data
+test_that("Alignment penalty is inherited from the training data", {
+  result <-
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      optim_method = "DP"
+    )
+  expect_equal(result$call$lambda, mock_train_prep$alignment$call$lambda)
+  expect_equal(
+    result$call$penalty_method,
+    mock_train_prep$alignment$call$penalty_method
+  )
+  # Training data used the defaults (no penalty)
+  expect_equal(result$call$lambda, 0)
+  expect_equal(result$call$penalty_method, "roughness")
+})
+
+# Test 9: Check that "norm" is treated as an alias for "l2gam"
+test_that("Penalty alias 'norm' is converted to 'l2gam'", {
+  result <-
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      optim_method = "DP",
+      lambda = 0.01,
+      penalty_method = "norm"
+    )
+  expect_equal(result$call$penalty_method, "l2gam")
+})
+
+# Test 10: Check for errors with invalid penalty specifications
+test_that("Function throws error with invalid penalty specifications", {
+  expect_error(
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      penalty_method = "invalid_penalty"
+    )
+  )
+  expect_error(
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      lambda = "a"
+    ),
+    "lambda must be a single numeric value."
+  )
 })

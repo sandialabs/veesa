@@ -15,7 +15,7 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, dpi = 300)
 ```
 
-`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. See a preprint manuscript describing the approach on [arXiv](https://arxiv.org/abs/2501.07602). Installing `veesa` can be implemented using either of the commands below.
+`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. See manuscript describing the approach on [arXiv](https://arxiv.org/abs/2501.07602). Installing `veesa` can be implemented using either of the commands below.
 
 ```{r}
 #| eval: false
@@ -127,6 +127,24 @@ train_transformed_jfpca <-
   )
 ```
 
+By default, alignment applies no penalty (`lambda = 0`). To regularize the
+warping functions, set `lambda` to a positive value and (optionally) choose
+the penalty with `penalty_method` (`"roughness"`, `"l2gam"`, `"l2psi"`,
+`"geodesic"`, or `"none"`):
+
+```{r}
+#| eval: false
+train_transformed_jfpca_penalized <-
+  prep_training_data(
+    f = sim_train_matrix,
+    time = times,
+    fpca_method = "jfpca",
+    optim_method = "DPo",
+    lambda = 0.01,
+    penalty_method = "roughness"
+  )
+```
+
 Prepare test data:
 
 ```{r}
@@ -138,6 +156,10 @@ test_transformed_jfpca <-
     optim_method = "DPo"
   )
 ```
+
+`prep_testing_data` reuses the `lambda` and `penalty_method` values from the
+training data alignment by default, so the test data are aligned under the same
+criterion. Both can be overridden with the arguments of the same name.
 
 Plot several PCs:
 
@@ -320,3 +342,5 @@ plot_pc_directions(
   labs(title = "Top PC for Joint fPCA")
 ```
 
+# References
+K. Goode, J. D. Tucker, D. Ries, and H. Hoffman, “An Explainable Pipeline for Machine Learning with Functional Data”, Journal of Data Science, 10.6339/25-JDS1212, 2025.

@@ -9,7 +9,11 @@
 #'        grid on [0, 1] before alignment.
 #' @param fpca_method Character string specifying the type of elastic fPCA
 #'        method to use. Options are 'jfpca', 'hfpca', or 'vfpca'.
-#' @param lambda Numeric value specifying the elasticity. Default is 0.
+#' @param lambda Numeric value specifying the elasticity, i.e. the weight
+#'        placed on the penalty term specified by `penalty_method` in the
+#'        cost function minimized during alignment. Larger values produce
+#'        less elastic (smoother) warping functions. Default is 0, which
+#'        applies no penalty.
 #' @param penalty_method A string specifying the penalty term used in the
 #'   formulation of the cost function to minimize for alignment. Choices are
 #'   `"roughness"` which uses the norm of the second derivative, `"l2gam"`
@@ -111,6 +115,12 @@ prep_training_data <- function(
 
   # Make sure 'fpca_method' is all lower case
   fpca_method = tolower(fpca_method)
+
+  # Validate the alignment penalty before it is passed on to fdasrvf
+  penalty_method = match.arg(penalty_method)
+  if (!is.numeric(lambda) || length(lambda) != 1 || is.na(lambda)) {
+    stop("lambda must be a single numeric value.")
+  }
 
   # Change times to be between 0 and 1
   time = seq(0, 1, length.out = length(time))

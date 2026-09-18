@@ -11,7 +11,12 @@
   made a test function's coefficients depend on the rest of the test batch
 - `prep_testing_data` now aligns the test data with the same elasticity and
   penalty that were used on the training data, and accepts `lambda` and
-  `penalty_method` to override them
+  `penalty_method` to override them. Both are validated, `"norm"` is accepted
+  as an alias for `"l2gam"` (`fdasrvf::optimum.reparam` only takes the current
+  penalty names), and the settings used are returned in a new `call` component
+- `prep_training_data` now validates `lambda` and `penalty_method` before
+  passing them to `fdasrvf::time_warping`, and the documentation of `lambda`
+  describes its role as the weight on the alignment penalty
 - Fixed `center_warping_funs` leaving the SRSF mean uncentered
 - Exported `align_pcdirs` and `center_warping_funs`, which were documented but
   unavailable

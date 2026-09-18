@@ -25,13 +25,25 @@ training data.}
 mean. "DP", "DPo", and "RBFGS".}
 
 \item{lambda}{Numeric value specifying the elasticity used when aligning the
-test data. Default is NULL, which reuses the value that was used to
-align the training data.}
+testing data to the training data centroid. Default is `NULL`, which
+reuses the value of `lambda` that was applied to the training data by
+`prep_training_data` (stored in
+`train_prep$alignment$call$lambda`). Supplying a value overrides the
+training data value, but note that this makes the testing data
+alignment inconsistent with the training data alignment.}
 
-\item{penalty_method}{A string specifying the penalty term used when
-aligning the test data. See `prep_training_data` for the available
-choices. Default is NULL, which reuses the penalty that was used to
-align the training data.}
+\item{penalty_method}{A string specifying the penalty term used in the
+formulation of the cost function to minimize for alignment. Choices are
+`"roughness"` which uses the norm of the second derivative, `"l2gam"`
+which uses the \eqn{L^2} distance of the warping function to the identity,
+`"l2psi"` which uses the \eqn{L^2} distance of the SRVF of the warping
+function to that of the identity, `"geodesic"` which uses the geodesic
+distance to the identity, and `"none"` which applies no penalty. `"norm"`
+is kept for backward compatibility as an alias for `"l2gam"`. The penalty
+is weighted by `lambda`, so it has no effect when `lambda = 0`. Default is
+`NULL`, which reuses the penalty that was applied to the training data by
+`prep_training_data` (stored in
+`train_prep$alignment$call$penalty_method`).}
 }
 \value{
 List containing (varies slightly based on fpca method used):
@@ -55,12 +67,25 @@ List containing (varies slightly based on fpca method used):
         and hfpca only)
   \item g: test data combination of aligned and shooting functions (jfpca
         only)
+  \item call: list recording the alignment settings used (lambda,
+        penalty_method, and optim_method)
 }
 }
 \description{
 Applies steps 2 and 3 of the VEESA pipeline (alignment and elastic fPCA
     (jfpca, hfpca, or vfpca)) to the testing data based on the training
     data prepared using "prep_training_data".
+}
+\details{
+The testing data are aligned to the training data centroid by
+    penalized optimal reparameterization
+    (`fdasrvf::optimum.reparam`). By default, the elasticity (`lambda`) and
+    the penalty (`penalty_method`) used for the training data alignment are
+    reused here, so that the testing data are aligned under the same
+    criterion as the training data. They can be overridden with the
+    `lambda` and `penalty_method` arguments. The penalty is weighted by
+    `lambda`, so no penalty is applied when `lambda = 0` (the default in
+    `prep_training_data`).
 }
 \examples{
 # Load packages
