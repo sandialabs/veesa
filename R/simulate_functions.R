@@ -9,8 +9,8 @@
 #'
 #' @export simulate_functions
 #'
-#' @importFrom fdasrvf f_to_srvf jointFPCA optimum.reparam time_warping warp_f_gamma
-#' @importFrom purrr map map2
+#' @importFrom purrr pmap
+#' @importFrom stats runif
 #'
 #' @returns Data frame with the following columns (where f is the function):
 #' \itemize{
@@ -42,6 +42,9 @@ simulate_functions <- function(M, N, seed) {
   # Create a sequence of N sample times
   t = seq(0, 1, length.out = N)
 
+  # Set seed for reproducibility
+  set.seed(seed)
+
   # Generate pairs of independent covariate values
   # based on the number functions specified (M)
   x1 = runif(n = M, min = 0.1, max = 1)
@@ -49,8 +52,7 @@ simulate_functions <- function(M, N, seed) {
   x3 = runif(n = M, min = -0.1, max = 0.1)
 
   # Generate the functions and store in a data frame
-  set.seed(seed)
-  res = purrr::pmap_df(
+  res = purrr::pmap(
     .l = list(x1, x2, x3),
     .f = function(x1, x2, x3, t) {
       data.frame(
@@ -61,9 +63,10 @@ simulate_functions <- function(M, N, seed) {
         x3 = x3
       )
     },
-    t = t,
-    .id = "id"
+    t = t
   )
+  res = do.call(rbind, res)
+  res = data.frame(id = as.character(rep(seq_along(x1), each = length(t))), res)
 
   # Return the simulated functions
   return(res)

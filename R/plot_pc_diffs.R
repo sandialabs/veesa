@@ -17,6 +17,12 @@
 #'
 #' @export plot_pc_diffs
 #'
+#' @importFrom dplyr %>% distinct group_by left_join mutate n pull select
+#' @importFrom ggplot2 .data aes facet_wrap geom_hline geom_line geom_ribbon ggplot labs scale_linetype_manual scale_size_manual theme_bw
+#' @importFrom purrr map_df
+#' @importFrom stringr str_replace
+#' @importFrom tidyr pivot_longer
+#'
 #' @returns ggplot2 plot of specified differences beteen principal component directions and the Karcher mean
 #'
 #' @examples
@@ -118,7 +124,6 @@ plot_pc_diffs <-
                   paste0("plus", 1:nstds, "SD"))
     colnames(fpc_df)[-1] = colnames
     linenames <- c(paste0("-", nstds:1, "SD"),
-                   "Karcher Mean",
                    paste0("+", 1:nstds, "SD"))
     
     fpc_df <-
@@ -141,7 +146,7 @@ plot_pc_diffs <-
       mean_linesize = 1
     }
     
-    linetpyes = c(rep("dashed", nstds), "solid", rep("dotdash", nstds))
+    linetypes = c(rep("dashed", nstds), rep("dotdash", nstds))
     
     perc_df <-
       data.frame(fpc = fpcs, perc = as.character(round(prop_var[fpcs] * 100, digits))) %>%
@@ -184,7 +189,7 @@ plot_pc_diffs <-
         plot + 
         ggplot2::geom_line(aes(linetype = .data$line, color = .data$line), alpha = alpha) + 
         ggplot2::geom_ribbon(aes(ymin = 0, ymax = .data$diff, fill = .data$line), alpha = alpha_fill) +
-        ggplot2::scale_linetype_manual(values = linetpyes)
+        ggplot2::scale_linetype_manual(values = linetypes)
     } else {
       plot <- 
         plot + 
