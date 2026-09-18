@@ -57,7 +57,10 @@ List containing (varies slightly based on fpca method used):
   \item mqn: training data SRSF mean (test data functions are aligned to
         this function)
   \item gam: test data warping functions - similar structure to f0
-  \item coef: test data principal component coefficients
+  \item coef: test data principal component coefficients - matrix with one
+        row per principal component and one column per test function (note
+        that this is the transpose of the layout used by the training data
+        coefficients in `prep_training_data`)
   \item psi: test data warping function SRVFs - similar structure to f0
         (jfpca and hfpca only)
   \item nu: test data shooting functions - similar structure to f0 (jfpca

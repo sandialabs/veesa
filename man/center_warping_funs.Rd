@@ -10,8 +10,8 @@ center_warping_funs(train_obj)
 \item{train_obj}{Output object from `prep_training_data`}
 }
 \value{
-Object with the same structure as `train_obj` but qn, fn, and gam
-        have been replaced by centered versions
+Object with the same structure as `train_obj` but mqn, qn, fn, and
+        gam have been replaced by centered versions
 }
 \description{
 The function 'prep_training_data' does not center the warping functions. For

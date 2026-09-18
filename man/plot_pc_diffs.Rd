@@ -30,7 +30,7 @@ plot_pc_diffs(
 
 \item{digits}{Number of digits to print in the title for the proportion of variability explained by a PC}
 
-\item{alpha}{Vector of alpha values associated with lines in plot (length must match number of lines in plot)}
+\item{alpha}{Single value between 0 and 1 specifying the transparency applied to all lines in the plot}
 
 \item{alpha_fill}{Value of alpha to use with the fill color in the ribbons (length of 1).}
 
@@ -40,7 +40,7 @@ plot_pc_diffs(
 
 \item{mean_linesize}{Value of width to use with the horizontal line with an intercept of 0.}
 
-\item{linetype}{Vector of line types (e.g., "solid" or "dashed") associated with lines in plot (length must match number of lines in plot)}
+\item{linetype}{Single logical value indicating whether the lines should be distinguished by line type in addition to color}
 
 \item{freey}{Indicator for whether y-axis should be freed across facets}
 }

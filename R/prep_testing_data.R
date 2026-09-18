@@ -56,7 +56,10 @@
 #'   \item mqn: training data SRSF mean (test data functions are aligned to
 #'         this function)
 #'   \item gam: test data warping functions - similar structure to f0
-#'   \item coef: test data principal component coefficients
+#'   \item coef: test data principal component coefficients - matrix with one
+#'         row per principal component and one column per test function (note
+#'         that this is the transpose of the layout used by the training data
+#'         coefficients in `prep_training_data`)
 #'   \item psi: test data warping function SRVFs - similar structure to f0
 #'         (jfpca and hfpca only)
 #'   \item nu: test data shooting functions - similar structure to f0 (jfpca
@@ -207,10 +210,10 @@ prep_testing_data <- function(
     )
 
   # 4. Apply warping functions to align test data functions:
-  fn = purrr::map2(.x = f, .y = gamma, .f = warp_f_gamma, time = time)
+  fn = purrr::map2(.x = f, .y = gamma, .f = fdasrvf::warp_f_gamma, time = time)
 
   # 5. Compute the SRSFs of the aligned functions
-  qn = purrr::map(.x = fn, .f = f_to_srvf, time = time)
+  qn = purrr::map(.x = fn, .f = fdasrvf::f_to_srvf, time = time)
 
   #### Functional Principal Components ---------------------------------
 
@@ -224,11 +227,13 @@ prep_testing_data <- function(
         binsize = mean(diff(time))
       ) %>%
       purrr::map(.f = sqrt)
-    # Compute test data shooting functions:
+    # Compute test data shooting functions (the base point must be the one
+    # estimated from the training data so that the test shooting vectors live
+    # in the same tangent space as the training ones):
     if (fpca_type == "jfpca") {
       mu_psi = fpca_train$mu_psi
     } else {
-      mu_psi = rowMeans(matrix(unlist(psi), ncol = ntest, byrow = FALSE))
+      mu_psi = fpca_train$mu
     }
     nu = purrr::map(.x = psi, .f = fdasrvf::inv_exp_map, Psi = mu_psi)
   }
@@ -250,13 +255,16 @@ prep_testing_data <- function(
     # Second, compute the PCs
     pcs = purrr::map(.x = g, .f = function(g) (g - fpca_train$mu_g) %*% fpca_train$U)
   } else if (fpca_type == "vfpca") {
-    # First, join aligned functions with id value and their means
+    # First, join aligned functions with id value
     h = purrr::pmap(.l = list(qn, q_id), .f = c)
-    h_mean = c(q_mean_train, mean(unlist(q_id)))
-    # Second, compute the PCs
+    # Second, compute the PCs (centered using the training data mean stored by
+    # fdasrvf::vertFPCA, not a mean recomputed from the test data)
+    h_mean = fpca_train$mqn
     pcs = purrr::map(.x = h, .f = function(h) (h - h_mean) %*% fpca_train$U)
   } else if (fpca_type == "hfpca") {
-    nu_mean = rowMeans(matrix(unlist(nu), ncol = ntest, byrow = FALSE))
+    # Centered using the training data shooting vector mean stored by
+    # fdasrvf::horizFPCA, not a mean recomputed from the test data
+    nu_mean = fpca_train$vm
     pcs = purrr::map(.x = nu, .f = function(nu) (nu - nu_mean) %*% fpca_train$U)
   }
 

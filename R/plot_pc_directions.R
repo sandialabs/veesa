@@ -8,16 +8,16 @@
 #' @param times Optional vector of times (if not included, times will be represented on the interval from 0 to 1)
 #' @param digits Number of digits to print in the title for the proportion of variability explained by a PC
 #' @param nrow Number of rows to use when creating a grid of plots
-#' @param alpha Vector of alpha values associated with lines in plot (length must match number of lines in plot)
+#' @param alpha Single value between 0 and 1 specifying the transparency applied to all lines in the plot
 #' @param linesizes Vector of line widths associated with lines in plot (length must match number of lines in plot)
-#' @param linetype Vector of line types (e.g., "solid" or "dashed") associated with lines in plot (length must match number of lines in plot)
+#' @param linetype Single logical value indicating whether the lines should be distinguished by line type in addition to color
 #' @param freey Indicator for whether y-axis should be freed across facets
 #'
 #' @export plot_pc_directions
 #'
 #' @importFrom dplyr %>% arrange distinct group_by left_join mutate n pull rename select
 #' @importFrom forcats fct_relevel
-#' @importFrom ggplot2 .data aes facet_wrap geom_line ggplot labs scale_linetype_manual scale_size_manual theme_bw
+#' @importFrom ggplot2 .data aes facet_wrap geom_line ggplot labs scale_linetype_manual scale_linewidth_manual theme_bw
 #' @importFrom purrr map_df
 #' @importFrom stats runif
 #' @importFrom stringr str_replace
@@ -89,8 +89,24 @@ plot_pc_directions <- function(
     freey = FALSE
   ) {
 
-  # Compute prop var
-  prop_var = (fdasrvf$latent)^2 / sum((fdasrvf$latent)^2)
+  # Check the plotting arguments that are used as scalars
+  if (!is.logical(linetype) || length(linetype) != 1) {
+    stop("'linetype' must be a single logical value.")
+  }
+  if (length(alpha) != 1) {
+    stop("'alpha' must be a single value.")
+  }
+
+  # Compute prop var. 'latent' holds the eigenvalues of the covariance matrix
+  # (i.e. the variances), so no squaring is needed. 'eigs' (jfpca only) holds
+  # the full spectrum, which is the right denominator when only some of the
+  # principal components are retained.
+  prop_var = fdasrvf$latent / sum(if (is.null(fdasrvf$eigs)) fdasrvf$latent else fdasrvf$eigs)
+
+  # Make sure the requested PCs are available
+  if (any(fpcs < 1) || any(fpcs > length(prop_var))) {
+    stop("'fpcs' contains principal components that are not in the fPCA object.")
+  }
 
   # Get the fPC data
   if (fpca_method %in% c("jfpca", "vfpca")) {
@@ -126,7 +142,7 @@ plot_pc_directions <- function(
     fpc_df %>%
     dplyr::group_by(.data$fpc) %>%
     dplyr::mutate(index = 1:n(), time = times) %>%
-    tidyr::pivot_longer(names_to = "line", cols = -c(.data$fpc, .data$index, .data$time)) %>%
+    tidyr::pivot_longer(names_to = "line", cols = -c("fpc", "index", "time")) %>%
     dplyr::mutate(line = stringr::str_replace(.data$line, "plus", "+")) %>%
     dplyr::mutate(line = stringr::str_replace(.data$line, "minus", "-")) %>%
     dplyr::mutate(line = factor(.data$line, levels = linenames))
@@ -137,10 +153,20 @@ plot_pc_directions <- function(
   }
   linetypes = c(rep("dashed", nstds), "solid", rep("dotdash", nstds))
 
-  # Compute fPC percent
+  # Compute fPC percent (a PC that is non-zero but rounds to zero at the
+  # requested number of digits is reported as smaller than the smallest value
+  # that can be displayed)
+  perc_raw = prop_var[fpcs] * 100
+  perc_round = round(perc_raw, digits)
   perc_df <-
-    data.frame(fpc = fpcs, perc = as.character(round(prop_var[fpcs] * 100, digits))) %>%
-    dplyr::mutate(perc = ifelse(as.numeric(.data$perc) < 0.001, "<0.001", .data$perc))
+    data.frame(
+      fpc = fpcs,
+      perc = ifelse(
+        perc_round == 0 & perc_raw > 0,
+        paste0("<", format(10 ^ (-digits), scientific = FALSE)),
+        as.character(perc_round)
+      )
+    )
 
   # Finish preparing the data for the plot
   if (fpca_method == "jfpca") {
@@ -163,9 +189,9 @@ plot_pc_directions <- function(
 
   fpc_facet_order <-
     plot_df %>%
-    dplyr::select(.data$fpc, .data$fpc_facet) %>%
+    dplyr::select("fpc", "fpc_facet") %>%
     dplyr::distinct() %>%
-    dplyr::pull(.data$fpc_facet)
+    dplyr::pull("fpc_facet")
 
   # Uncomment for ordering by PC number
   # fpc_facet_order <-
@@ -187,9 +213,9 @@ plot_pc_directions <- function(
       y = .data$value,
       group = .data$line,
       color = .data$line,
-      size = .data$line
+      linewidth = .data$line
     ))
-  if (linetype == TRUE) {
+  if (linetype) {
     plot <- plot +
       ggplot2::geom_line(aes(linetype =.data$line), alpha = alpha) +
       ggplot2::scale_linetype_manual(values = linetypes)
@@ -207,7 +233,7 @@ plot_pc_directions <- function(
   }
   plot +
     ggplot2::theme_bw() +
-    ggplot2::scale_size_manual(values = linesizes) +
-    ggplot2::labs(color = "", linetype = "", size = "", y = "")
+    ggplot2::scale_linewidth_manual(values = linesizes) +
+    ggplot2::labs(color = "", linetype = "", linewidth = "", y = "")
 
 }
