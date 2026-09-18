@@ -135,7 +135,7 @@ plot_pc_directions <- function(
   if (is.null(linesizes)) {
     linesizes = c(seq(0.3, 1, length.out = nstds+1), seq(0.3, 1, length.out = nstds+1)[nstds:1])
   }
-  linetpyes = c(rep("dashed", nstds), "solid", rep("dotdash", nstds))
+  linetypes = c(rep("dashed", nstds), "solid", rep("dotdash", nstds))
 
   # Compute fPC percent
   perc_df <-
@@ -192,7 +192,7 @@ plot_pc_directions <- function(
   if (linetype == TRUE) {
     plot <- plot +
       ggplot2::geom_line(aes(linetype =.data$line), alpha = alpha) +
-      ggplot2::scale_linetype_manual(values = linetpyes)
+      ggplot2::scale_linetype_manual(values = linetypes)
   } else {
     plot <- plot + ggplot2::geom_line(alpha = alpha)
   }

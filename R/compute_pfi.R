@@ -10,7 +10,7 @@
 #' @param metric Metric used to compute PFI (choose from "accuracy", "logloss",
 #'        and "nmse")
 #' @param eps Log loss is undefined for p = 0 or p = 1, so probabilities are
-#         clipped to max(eps, min(1 - eps, p)). Default is 1e-15.
+#'        clipped to max(eps, min(1 - eps, p)). Default is 1e-15.
 #'
 #' @export compute_pfi
 #'
