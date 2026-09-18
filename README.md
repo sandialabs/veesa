@@ -125,11 +125,19 @@ test_transformed_jfpca <-
 
 Plot several PCs:
 
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
+    ## ℹ The deprecated feature was likely used in the veesa package.
+    ##   Please report the issue to the authors.
+    ## This warning is displayed once per session.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
 ![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 Compare jfPCA coefficients from train and test data:
 
-<img src="README_files/figure-gfm/unnamed-chunk-11-1.png" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-11-1.png" alt="" width="75%" style="display: block; margin: auto;" />
 
 #### Models
 
@@ -178,11 +186,11 @@ pfi_jfpca <- compute_pfi(
 
 PFI results (mean of reps):
 
-<img src="README_files/figure-gfm/unnamed-chunk-16-1.png" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-16-1.png" alt="" width="75%" style="display: block; margin: auto;" />
 
 PFI results (variability across reps):
 
-<img src="README_files/figure-gfm/unnamed-chunk-17-1.png" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-17-1.png" alt="" width="75%" style="display: block; margin: auto;" />
 
 Identify the top PC for each elastic fPCA method:
 
@@ -197,4 +205,4 @@ top_pc_jfpca <-
 
 Principal directions of top PC for each jfPCA method:
 
-<img src="README_files/figure-gfm/unnamed-chunk-19-1.png" width="60%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-19-1.png" alt="" width="60%" style="display: block; margin: auto;" />
