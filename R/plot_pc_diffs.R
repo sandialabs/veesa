@@ -23,7 +23,7 @@
 #' @importFrom stringr str_replace
 #' @importFrom tidyr pivot_longer
 #'
-#' @returns ggplot2 plot of specified differences beteen principal component directions and the Karcher mean
+#' @returns ggplot2 plot of specified differences between principal component directions and the Karcher mean
 #'
 #' @examples
 #' # Load packages
@@ -91,24 +91,24 @@ plot_pc_diffs <-
             mean_linesize = NULL,
             linetype = TRUE,
             freey = FALSE) {
-    
+
     if (!is.logical(linetype) || length(linetype) != 1) {
       stop("'linetype' must be a single logical value.")
     }
     if (length(alpha) != 1) {
       stop("'alpha' must be a single value.")
     }
-    
+
     # 'latent' holds the eigenvalues of the covariance matrix (i.e. the
     # variances), so no squaring is needed. 'eigs' (jfpca only) holds the full
     # spectrum, which is the right denominator when only some of the principal
     # components are retained.
     prop_var = fdasrvf$latent / sum(if (is.null(fdasrvf$eigs)) fdasrvf$latent else fdasrvf$eigs)
-    
+
     if (any(fpcs < 1) || any(fpcs > length(prop_var))) {
       stop("'fpcs' contains principal components that are not in the fPCA object.")
     }
-    
+
     if (fpca_method %in% c("jfpca", "vfpca")) {
       fpc_df = purrr::map_df(
         .x = fpcs,
@@ -132,7 +132,7 @@ plot_pc_diffs <-
     } else {
       stop("'fpca_method' entered incorrectly. Must be 'jfpca', 'vfpca', or 'hfpca'.")
     }
-    
+
     nstds <- (dim(fpc_df)[2] - 2) / 2
     colnames <- c(paste0("minus", nstds:1, "SD"),
                   "Karcher Mean",
@@ -140,7 +140,7 @@ plot_pc_diffs <-
     colnames(fpc_df)[-1] = colnames
     linenames <- c(paste0("-", nstds:1, "SD"),
                    paste0("+", 1:nstds, "SD"))
-    
+
     fpc_df <-
       fpc_df %>%
       dplyr::group_by(.data$fpc) %>%
@@ -151,18 +151,18 @@ plot_pc_diffs <-
       dplyr::mutate(line = stringr::str_replace(.data$line, "plus", "+")) %>%
       dplyr::mutate(line = stringr::str_replace(.data$line, "minus", "-")) %>%
       dplyr::mutate(line = factor(.data$line, levels = linenames))
-    
+
     if (is.null(linesizes)) {
       linesizes = c(seq(0.3, 0.9, length.out = nstds),
                     seq(0.3, 0.9, length.out = nstds)[nstds:1])
     }
-    
+
     if (is.null(mean_linesize)) {
       mean_linesize = 1
     }
-    
+
     linetypes = c(rep("dashed", nstds), rep("dotdash", nstds))
-    
+
     perc_raw = prop_var[fpcs] * 100
     perc_round = round(perc_raw, digits)
     perc_df <-
@@ -174,7 +174,7 @@ plot_pc_diffs <-
           as.character(perc_round)
         )
       )
-    
+
     if (fpca_method == "jfpca") {
       pc_name = "jfPC"
     } else if (fpca_method == "vfpca") {
@@ -182,22 +182,22 @@ plot_pc_diffs <-
     } else if (fpca_method == "hfpca") {
       pc_name = "hfPC"
     }
-    
+
     plot_df <-
       fpc_df %>%
       dplyr::left_join(perc_df, by = "fpc") %>%
       dplyr::mutate(fpc_facet = paste0(pc_name, " ", .data$fpc, " (", .data$perc, "%)"))
-    
+
     fpc_facet_order <-
       plot_df %>%
       dplyr::select("fpc", "fpc_facet") %>%
       dplyr::distinct() %>%
       dplyr::pull("fpc_facet")
-    
+
     plot_df <-
       plot_df %>%
       dplyr::mutate(fpc_facet = factor(.data$fpc_facet, levels = fpc_facet_order))
-    
+
     plot <-
       plot_df %>%
       ggplot2::ggplot(ggplot2::aes(
@@ -206,32 +206,32 @@ plot_pc_diffs <-
         group = .data$line,
         linewidth = .data$line
       ))
-    
+
     if (linetype) {
-      plot <- 
-        plot + 
-        ggplot2::geom_line(aes(linetype = .data$line, color = .data$line), alpha = alpha) + 
+      plot <-
+        plot +
+        ggplot2::geom_line(aes(linetype = .data$line, color = .data$line), alpha = alpha) +
         ggplot2::geom_ribbon(aes(ymin = 0, ymax = .data$diff, fill = .data$line), alpha = alpha_fill) +
         ggplot2::scale_linetype_manual(values = linetypes)
     } else {
-      plot <- 
-        plot + 
-        ggplot2::geom_line(aes(color = .data$line), alpha = alpha) + 
+      plot <-
+        plot +
+        ggplot2::geom_line(aes(color = .data$line), alpha = alpha) +
         ggplot2::geom_ribbon(aes(ymin = 0, ymax = .data$diff, fill = .data$line), alpha = alpha_fill)
     }
-    
+
     plot <- plot + ggplot2::geom_hline(yintercept = 0, linewidth = mean_linesize)
-    
+
     if (freey) {
-      plot <- 
-        plot + 
+      plot <-
+        plot +
         ggplot2::facet_wrap(. ~ .data$fpc_facet, nrow = nrow, scales = "free_y")
     } else {
       plot <- plot + ggplot2::facet_wrap(. ~ .data$fpc_facet, nrow = nrow)
     }
-    
+
     plot +
-      ggplot2::theme_bw() + 
+      ggplot2::theme_bw() +
       ggplot2::scale_linewidth_manual(values = linesizes) +
       ggplot2::labs(
         color = "",
