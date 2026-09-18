@@ -99,3 +99,73 @@ test_that("Function works with different optimization methods", {
   expect_type(result_dp, "list")
   expect_type(result_dpo, "list")
 })
+
+# Test 6: Check that the alignment penalty is inherited from the training data
+test_that("Alignment penalty is inherited from the training data", {
+  result <-
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      optim_method = "DP"
+    )
+  expect_equal(result$call$lambda, mock_train_prep$alignment$call$lambda)
+  expect_equal(
+    result$call$penalty_method,
+    mock_train_prep$alignment$call$penalty_method
+  )
+  # Training data used the defaults (no penalty)
+  expect_equal(result$call$lambda, 0)
+  expect_equal(result$call$penalty_method, "roughness")
+})
+
+# Test 7: Check that the alignment penalty can be overridden
+test_that("Alignment penalty can be overridden", {
+  result <-
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      optim_method = "DP",
+      lambda = 0.01,
+      penalty_method = "l2gam"
+    )
+  expect_equal(result$call$lambda, 0.01)
+  expect_equal(result$call$penalty_method, "l2gam")
+  expect_equal(dim(result$fn), dim(mock_f))
+})
+
+# Test 8: Check that "norm" is treated as an alias for "l2gam"
+test_that("Penalty alias 'norm' is converted to 'l2gam'", {
+  result <-
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      optim_method = "DP",
+      lambda = 0.01,
+      penalty_method = "norm"
+    )
+  expect_equal(result$call$penalty_method, "l2gam")
+})
+
+# Test 9: Check for errors with invalid penalty specifications
+test_that("Function throws error with invalid penalty specifications", {
+  expect_error(
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      penalty_method = "invalid_penalty"
+    )
+  )
+  expect_error(
+    prep_testing_data(
+      f = mock_f,
+      time = mock_time,
+      train_prep = mock_train_prep,
+      lambda = "a"
+    ),
+    "lambda must be a single numeric value."
+  )
+})

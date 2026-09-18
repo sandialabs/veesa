@@ -4,12 +4,41 @@
 #'     (jfpca, hfpca, or vfpca)) to the testing data based on the training
 #'     data prepared using "prep_training_data".
 #'
+#' @details The testing data are aligned to the training data centroid by
+#'     penalized optimal reparameterization
+#'     (`fdasrvf::optimum.reparam`). By default, the elasticity (`lambda`) and
+#'     the penalty (`penalty_method`) used for the training data alignment are
+#'     reused here, so that the testing data are aligned under the same
+#'     criterion as the training data. They can be overridden with the
+#'     `lambda` and `penalty_method` arguments. The penalty is weighted by
+#'     `lambda`, so no penalty is applied when `lambda = 0` (the default in
+#'     `prep_training_data`).
+#'
 #' @param f Matrix (size M x N) of test data with N functions and M samples.
 #' @param time Vector of size M describing the sample points
 #' @param train_prep Object returned from applying "prep_training_data" to
 #'        training data.
 #' @param optim_method Method used for optimization when computing the Karcher
 #'        mean. "DP", "DPo", and "RBFGS".
+#' @param lambda Numeric value specifying the elasticity used when aligning the
+#'        testing data to the training data centroid. Default is `NULL`, which
+#'        reuses the value of `lambda` that was applied to the training data by
+#'        `prep_training_data` (stored in
+#'        `train_prep$alignment$call$lambda`). Supplying a value overrides the
+#'        training data value, but note that this makes the testing data
+#'        alignment inconsistent with the training data alignment.
+#' @param penalty_method A string specifying the penalty term used in the
+#'   formulation of the cost function to minimize for alignment. Choices are
+#'   `"roughness"` which uses the norm of the second derivative, `"l2gam"`
+#'   which uses the \eqn{L^2} distance of the warping function to the identity,
+#'   `"l2psi"` which uses the \eqn{L^2} distance of the SRVF of the warping
+#'   function to that of the identity, `"geodesic"` which uses the geodesic
+#'   distance to the identity, and `"none"` which applies no penalty. `"norm"`
+#'   is kept for backward compatibility as an alias for `"l2gam"`. The penalty
+#'   is weighted by `lambda`, so it has no effect when `lambda = 0`. Default is
+#'   `NULL`, which reuses the penalty that was applied to the training data by
+#'   `prep_training_data` (stored in
+#'   `train_prep$alignment$call$penalty_method`).
 #'
 #' @export prep_testing_data
 #'
@@ -34,6 +63,8 @@
 #'         and hfpca only)
 #'   \item g: test data combination of aligned and shooting functions (jfpca
 #'         only)
+#'   \item call: list recording the alignment settings used (lambda,
+#'         penalty_method, and optim_method)
 #' }
 #'
 #' @examples
@@ -96,7 +127,14 @@
 #'   optim_method = "DP"
 #'  )
 
-prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
+prep_testing_data <- function(
+    f,
+    time,
+    train_prep,
+    optim_method = "DP",
+    lambda = NULL,
+    penalty_method = NULL
+  ) {
 
   #### Setup -----------------------------------------------------------
 
@@ -113,6 +151,34 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
   aligned_train = train_prep$alignment
   fpca_train = train_prep$fpca_res
   fpca_type = train_prep$fpca_type
+
+  # Determine the alignment penalty to apply to the test data. By default,
+  # the elasticity and penalty used to align the training data (stored in the
+  # 'call' component of the fdasrvf::time_warping output) are reused so that
+  # the test data are aligned under the same criterion as the training data.
+  train_call = aligned_train$call
+  if (is.null(lambda)) {
+    lambda = if (is.null(train_call$lambda)) 0 else train_call$lambda
+  }
+  if (!is.numeric(lambda) || length(lambda) != 1 || is.na(lambda)) {
+    stop("lambda must be a single numeric value.")
+  }
+  if (is.null(penalty_method)) {
+    penalty_method <-
+      if (is.null(train_call$penalty_method)) {
+        "roughness"
+      } else {
+        train_call$penalty_method
+      }
+  }
+  penalty_method <-
+    match.arg(
+      arg = penalty_method,
+      choices = c("roughness", "l2gam", "l2psi", "geodesic", "none", "norm")
+    )
+  # "norm" is an alias kept in fdasrvf for backward compatibility, but
+  # fdasrvf::optimum.reparam only accepts the current penalty names
+  if (penalty_method == "norm") penalty_method = "l2gam"
 
   # Note: This function performs all computation as lists and converts
   # the lists to matrices at the end before returning the results
@@ -135,6 +201,8 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
       Q1 = q_mean_train,
       T1 = time,
       T2 = time,
+      lambda = lambda,
+      pen = penalty_method,
       method = optim_method
     )
 
@@ -224,6 +292,15 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
           x
         }
       }
+    )
+
+  # Record the alignment settings that were used (mirrors the 'call'
+  # component of the fdasrvf::time_warping output)
+  res$call <-
+    list(
+      lambda = lambda,
+      penalty_method = penalty_method,
+      optim_method = optim_method
     )
 
   # Return a list with the results

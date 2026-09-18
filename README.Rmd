@@ -127,6 +127,24 @@ train_transformed_jfpca <-
   )
 ```
 
+By default, alignment applies no penalty (`lambda = 0`). To regularize the
+warping functions, set `lambda` to a positive value and (optionally) choose
+the penalty with `penalty_method` (`"roughness"`, `"l2gam"`, `"l2psi"`,
+`"geodesic"`, or `"none"`):
+
+```{r}
+#| eval: false
+train_transformed_jfpca_penalized <-
+  prep_training_data(
+    f = sim_train_matrix,
+    time = times,
+    fpca_method = "jfpca",
+    optim_method = "DPo",
+    lambda = 0.01,
+    penalty_method = "roughness"
+  )
+```
+
 Prepare test data:
 
 ```{r}
@@ -138,6 +156,10 @@ test_transformed_jfpca <-
     optim_method = "DPo"
   )
 ```
+
+`prep_testing_data` reuses the `lambda` and `penalty_method` values from the
+training data alignment by default, so the test data are aligned under the same
+criterion. Both can be overridden with the arguments of the same name.
 
 Plot several PCs:
 

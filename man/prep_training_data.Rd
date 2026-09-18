@@ -29,7 +29,11 @@ prep_training_data(
 \item{fpca_method}{Character string specifying the type of elastic fPCA
 method to use. Options are 'jfpca', 'hfpca', or 'vfpca'.}
 
-\item{lambda}{Numeric value specifying the elasticity. Default is 0.}
+\item{lambda}{Numeric value specifying the elasticity, i.e. the weight
+placed on the penalty term specified by `penalty_method` in the
+cost function minimized during alignment. Larger values produce
+less elastic (smoother) warping functions. Default is 0, which
+applies no penalty.}
 
 \item{penalty_method}{A string specifying the penalty term used in the
 formulation of the cost function to minimize for alignment. Choices are

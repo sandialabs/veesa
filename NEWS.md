@@ -1,3 +1,16 @@
+# veesa (development version)
+
+- Exposed the alignment penalty in `prep_testing_data` via the new `lambda` and
+  `penalty_method` arguments. By default, both are inherited from the training
+  data alignment, so the testing data are now aligned under the same criterion
+  as the training data (previously the testing data alignment always used
+  `lambda = 0`, i.e. no penalty).
+- `prep_testing_data` now returns a `call` component recording the `lambda`,
+  `penalty_method`, and `optim_method` used for alignment.
+- `prep_training_data` now validates `lambda` and `penalty_method` before
+  passing them to `fdasrvf::time_warping`, and the documentation of `lambda`
+  describes its role as the weight on the alignment penalty.
+
 # veesa 0.1.7
 
 - Added a function for plotting the differences between the PC directions and the mean

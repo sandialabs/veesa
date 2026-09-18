@@ -64,3 +64,38 @@ test_that("Default values for optional parameters are set correctly", {
 #     )
 #   expect_type(result, "list")
 # })
+
+# Test 7: Check that lambda and penalty_method are passed to fdasrvf
+test_that("Alignment penalty is passed to fdasrvf", {
+  result <-
+    prep_training_data(
+      f = mock_f,
+      time = mock_time,
+      fpca_method = "jfpca",
+      lambda = 0.01,
+      penalty_method = "l2gam"
+    )
+  expect_equal(result$alignment$call$lambda, 0.01)
+  expect_equal(result$alignment$call$penalty_method, "l2gam")
+})
+
+# Test 8: Check for errors with invalid penalty specifications
+test_that("Function throws error with invalid penalty specifications", {
+  expect_error(
+    prep_training_data(
+      f = mock_f,
+      time = mock_time,
+      fpca_method = "jfpca",
+      penalty_method = "invalid_penalty"
+    )
+  )
+  expect_error(
+    prep_training_data(
+      f = mock_f,
+      time = mock_time,
+      fpca_method = "jfpca",
+      lambda = "a"
+    ),
+    "lambda must be a single numeric value."
+  )
+})
