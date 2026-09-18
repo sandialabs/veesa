@@ -45,7 +45,7 @@ plot_pc_diffs(
 \item{freey}{Indicator for whether y-axis should be freed across facets}
 }
 \value{
-ggplot2 plot of specified differences beteen principal component directions and the Karcher mean
+ggplot2 plot of specified differences between principal component directions and the Karcher mean
 }
 \description{
 Function for plotting the functional PC directions
