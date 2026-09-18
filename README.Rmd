@@ -15,7 +15,7 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, dpi = 300)
 ```
 
-`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. See a preprint manuscript describing the approach on [arXiv](https://arxiv.org/abs/2501.07602). Installing `veesa` can be implemented using either of the commands below.
+`veesa` is an R package for implementing the VEESA pipeline for an explainable approach to training machine learning models with functional data inputs. See manuscript describing the approach on [arXiv](https://arxiv.org/abs/2501.07602). Installing `veesa` can be implemented using either of the commands below.
 
 ```{r}
 #| eval: false
@@ -342,3 +342,5 @@ plot_pc_directions(
   labs(title = "Top PC for Joint fPCA")
 ```
 
+# References
+K. Goode, J. D. Tucker, D. Ries, and H. Hoffman, “An Explainable Pipeline for Machine Learning with Functional Data”, Journal of Data Science, 10.6339/25-JDS1212, 2025.

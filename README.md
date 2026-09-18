@@ -12,7 +12,7 @@ coverage](https://codecov.io/gh/sandialabs/veesa/graph/badge.svg)](https://app.c
 
 `veesa` is an R package for implementing the VEESA pipeline for an
 explainable approach to training machine learning models with functional
-data inputs. See a preprint manuscript describing the approach on
+data inputs. See manuscript describing the approach on
 [arXiv](https://arxiv.org/abs/2501.07602). Installing `veesa` can be
 implemented using either of the commands below.
 
@@ -111,10 +111,10 @@ train_transformed_jfpca <-
   )
 ```
 
-By default, alignment applies no penalty (`lambda = 0`). To regularize the
-warping functions, set `lambda` to a positive value and (optionally) choose
-the penalty with `penalty_method` (`"roughness"`, `"l2gam"`, `"l2psi"`,
-`"geodesic"`, or `"none"`):
+By default, alignment applies no penalty (`lambda = 0`). To regularize
+the warping functions, set `lambda` to a positive value and (optionally)
+choose the penalty with `penalty_method` (`"roughness"`, `"l2gam"`,
+`"l2psi"`, `"geodesic"`, or `"none"`):
 
 ``` r
 train_transformed_jfpca_penalized <-
@@ -140,9 +140,10 @@ test_transformed_jfpca <-
   )
 ```
 
-`prep_testing_data` reuses the `lambda` and `penalty_method` values from the
-training data alignment by default, so the test data are aligned under the same
-criterion. Both can be overridden with the arguments of the same name.
+`prep_testing_data` reuses the `lambda` and `penalty_method` values from
+the training data alignment by default, so the test data are aligned
+under the same criterion. Both can be overridden with the arguments of
+the same name.
 
 Plot several PCs:
 
@@ -154,11 +155,11 @@ Plot several PCs:
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
 
-![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 Compare jfPCA coefficients from train and test data:
 
-<img src="README_files/figure-gfm/unnamed-chunk-11-1.png" alt="" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-12-1.png" alt="" width="75%" style="display: block; margin: auto;" />
 
 #### Models
 
@@ -207,11 +208,11 @@ pfi_jfpca <- compute_pfi(
 
 PFI results (mean of reps):
 
-<img src="README_files/figure-gfm/unnamed-chunk-16-1.png" alt="" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-17-1.png" alt="" width="75%" style="display: block; margin: auto;" />
 
 PFI results (variability across reps):
 
-<img src="README_files/figure-gfm/unnamed-chunk-17-1.png" alt="" width="75%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-18-1.png" alt="" width="75%" style="display: block; margin: auto;" />
 
 Identify the top PC for each elastic fPCA method:
 
@@ -226,4 +227,10 @@ top_pc_jfpca <-
 
 Principal directions of top PC for each jfPCA method:
 
-<img src="README_files/figure-gfm/unnamed-chunk-19-1.png" alt="" width="60%" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-20-1.png" alt="" width="60%" style="display: block; margin: auto;" />
+
+# References
+
+K. Goode, J. D. Tucker, D. Ries, and H. Hoffman, “An Explainable
+Pipeline for Machine Learning with Functional Data”, Journal of Data
+Science, 10.6339/25-JDS1212, 2025.
