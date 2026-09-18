@@ -17,7 +17,6 @@ compute_nmse <- function(x, y, f, n) {
   if (is.null(dim(y))) {
     -sum((yhat - y) ^ 2) / n
   } else {
-    k = length(yhat$regrOutput)
     yhat = purrr::map(.x = yhat$regrOutput, .f = function(x) x$predicted) %>% unlist()
     y = as.vector(y)
     - sum((yhat- y) ^ 2) / length(yhat)

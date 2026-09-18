@@ -8,17 +8,17 @@
 #' @param times Optional vector of times (if not included, times will be represented on the interval from 0 to 1)
 #' @param digits Number of digits to print in the title for the proportion of variability explained by a PC
 #' @param nrow Number of rows to use when creating a grid of plots
-#' @param alpha Vector of alpha values associated with lines in plot (length must match number of lines in plot)
+#' @param alpha Single value between 0 and 1 specifying the transparency applied to all lines in the plot
 #' @param alpha_fill Value of alpha to use with the fill color in the ribbons (length of 1).
 #' @param linesizes Vector of line widths associated with lines in plot (length must match number of lines in plot)
 #' @param mean_linesize Value of width to use with the horizontal line with an intercept of 0.
-#' @param linetype Vector of line types (e.g., "solid" or "dashed") associated with lines in plot (length must match number of lines in plot)
+#' @param linetype Single logical value indicating whether the lines should be distinguished by line type in addition to color
 #' @param freey Indicator for whether y-axis should be freed across facets
 #'
 #' @export plot_pc_diffs
 #'
 #' @importFrom dplyr %>% distinct group_by left_join mutate n pull select
-#' @importFrom ggplot2 .data aes facet_wrap geom_hline geom_line geom_ribbon ggplot labs scale_linetype_manual scale_size_manual theme_bw
+#' @importFrom ggplot2 .data aes facet_wrap geom_hline geom_line geom_ribbon ggplot labs scale_linetype_manual scale_linewidth_manual theme_bw
 #' @importFrom purrr map_df
 #' @importFrom stringr str_replace
 #' @importFrom tidyr pivot_longer
@@ -92,7 +92,22 @@ plot_pc_diffs <-
             linetype = TRUE,
             freey = FALSE) {
     
-    prop_var = (fdasrvf$latent)^2 / sum((fdasrvf$latent)^2)
+    if (!is.logical(linetype) || length(linetype) != 1) {
+      stop("'linetype' must be a single logical value.")
+    }
+    if (length(alpha) != 1) {
+      stop("'alpha' must be a single value.")
+    }
+    
+    # 'latent' holds the eigenvalues of the covariance matrix (i.e. the
+    # variances), so no squaring is needed. 'eigs' (jfpca only) holds the full
+    # spectrum, which is the right denominator when only some of the principal
+    # components are retained.
+    prop_var = fdasrvf$latent / sum(if (is.null(fdasrvf$eigs)) fdasrvf$latent else fdasrvf$eigs)
+    
+    if (any(fpcs < 1) || any(fpcs > length(prop_var))) {
+      stop("'fpcs' contains principal components that are not in the fPCA object.")
+    }
     
     if (fpca_method %in% c("jfpca", "vfpca")) {
       fpc_df = purrr::map_df(
@@ -131,7 +146,7 @@ plot_pc_diffs <-
       dplyr::group_by(.data$fpc) %>%
       dplyr::mutate(index = 1:n(), time = times) %>%
       tidyr::pivot_longer(names_to = "line",
-                          cols = -c(.data$fpc, .data$index, .data$time, .data$`Karcher Mean`)) %>%
+                          cols = -c("fpc", "index", "time", "Karcher Mean")) %>%
       dplyr::mutate(diff = .data$`Karcher Mean` - .data$value) %>%
       dplyr::mutate(line = stringr::str_replace(.data$line, "plus", "+")) %>%
       dplyr::mutate(line = stringr::str_replace(.data$line, "minus", "-")) %>%
@@ -148,9 +163,17 @@ plot_pc_diffs <-
     
     linetypes = c(rep("dashed", nstds), rep("dotdash", nstds))
     
+    perc_raw = prop_var[fpcs] * 100
+    perc_round = round(perc_raw, digits)
     perc_df <-
-      data.frame(fpc = fpcs, perc = as.character(round(prop_var[fpcs] * 100, digits))) %>%
-      dplyr::mutate(perc = ifelse(as.numeric(.data$perc) < 0.001, "<0.001", .data$perc))
+      data.frame(
+        fpc = fpcs,
+        perc = ifelse(
+          perc_round == 0 & perc_raw > 0,
+          paste0("<", format(10 ^ (-digits), scientific = FALSE)),
+          as.character(perc_round)
+        )
+      )
     
     if (fpca_method == "jfpca") {
       pc_name = "jfPC"
@@ -167,9 +190,9 @@ plot_pc_diffs <-
     
     fpc_facet_order <-
       plot_df %>%
-      dplyr::select(.data$fpc, .data$fpc_facet) %>%
+      dplyr::select("fpc", "fpc_facet") %>%
       dplyr::distinct() %>%
-      dplyr::pull(.data$fpc_facet)
+      dplyr::pull("fpc_facet")
     
     plot_df <-
       plot_df %>%
@@ -181,10 +204,10 @@ plot_pc_diffs <-
         x = .data$time,
         y = .data$diff,
         group = .data$line,
-        size = .data$line
+        linewidth = .data$line
       ))
     
-    if (linetype == TRUE) {
+    if (linetype) {
       plot <- 
         plot + 
         ggplot2::geom_line(aes(linetype = .data$line, color = .data$line), alpha = alpha) + 
@@ -209,11 +232,10 @@ plot_pc_diffs <-
     
     plot +
       ggplot2::theme_bw() + 
-      ggplot2::scale_size_manual(values = linesizes) +
+      ggplot2::scale_linewidth_manual(values = linesizes) +
       ggplot2::labs(
         color = "",
         linetype = "",
-        size = "",
         fill = "",
         y = "",
         linewidth = ""

@@ -10,6 +10,13 @@
 #'        training data.
 #' @param optim_method Method used for optimization when computing the Karcher
 #'        mean. "DP", "DPo", and "RBFGS".
+#' @param lambda Numeric value specifying the elasticity used when aligning the
+#'        test data. Default is NULL, which reuses the value that was used to
+#'        align the training data.
+#' @param penalty_method A string specifying the penalty term used when
+#'        aligning the test data. See `prep_training_data` for the available
+#'        choices. Default is NULL, which reuses the penalty that was used to
+#'        align the training data.
 #'
 #' @export prep_testing_data
 #'
@@ -27,7 +34,10 @@
 #'   \item mqn: training data SRSF mean (test data functions are aligned to
 #'         this function)
 #'   \item gam: test data warping functions - similar structure to f0
-#'   \item coef: test data principal component coefficients
+#'   \item coef: test data principal component coefficients - matrix with one
+#'         row per principal component and one column per test function (note
+#'         that this is the transpose of the layout used by the training data
+#'         coefficients in `prep_training_data`)
 #'   \item psi: test data warping function SRVFs - similar structure to f0
 #'         (jfpca and hfpca only)
 #'   \item nu: test data shooting functions - similar structure to f0 (jfpca
@@ -96,12 +106,26 @@
 #'   optim_method = "DP"
 #'  )
 
-prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
+prep_testing_data <- function(
+    f,
+    time,
+    train_prep,
+    optim_method = "DP",
+    lambda = NULL,
+    penalty_method = NULL
+  ) {
 
   #### Setup -----------------------------------------------------------
 
   # Determine the number of functions in the test data
   ntest = dim(f)[2]
+
+  # Align the test data using the same penalty that was used on the training
+  # data unless the user asks for something else
+  if (is.null(lambda)) lambda = train_prep$alignment$call$lambda
+  if (is.null(penalty_method)) penalty_method = train_prep$alignment$call$penalty_method
+  if (is.null(lambda)) lambda = 0
+  if (is.null(penalty_method)) penalty_method = "roughness"
 
   # Change times to be between 0 and 1
   time = seq(0, 1, length.out = length(time))
@@ -135,14 +159,16 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
       Q1 = q_mean_train,
       T1 = time,
       T2 = time,
+      lambda = lambda,
+      pen = penalty_method,
       method = optim_method
     )
 
   # 4. Apply warping functions to align test data functions:
-  fn = purrr::map2(.x = f, .y = gamma, .f = warp_f_gamma, time = time)
+  fn = purrr::map2(.x = f, .y = gamma, .f = fdasrvf::warp_f_gamma, time = time)
 
   # 5. Compute the SRSFs of the aligned functions
-  qn = purrr::map(.x = fn, .f = f_to_srvf, time = time)
+  qn = purrr::map(.x = fn, .f = fdasrvf::f_to_srvf, time = time)
 
   #### Functional Principal Components ---------------------------------
 
@@ -156,11 +182,13 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
         binsize = mean(diff(time))
       ) %>%
       purrr::map(.f = sqrt)
-    # Compute test data shooting functions:
+    # Compute test data shooting functions (the base point must be the one
+    # estimated from the training data so that the test shooting vectors live
+    # in the same tangent space as the training ones):
     if (fpca_type == "jfpca") {
       mu_psi = fpca_train$mu_psi
     } else {
-      mu_psi = rowMeans(matrix(unlist(psi), ncol = ntest, byrow = FALSE))
+      mu_psi = fpca_train$mu
     }
     nu = purrr::map(.x = psi, .f = fdasrvf::inv_exp_map, Psi = mu_psi)
   }
@@ -182,13 +210,16 @@ prep_testing_data <- function(f, time, train_prep, optim_method = "DP") {
     # Second, compute the PCs
     pcs = purrr::map(.x = g, .f = function(g) (g - fpca_train$mu_g) %*% fpca_train$U)
   } else if (fpca_type == "vfpca") {
-    # First, join aligned functions with id value and their means
+    # First, join aligned functions with id value
     h = purrr::pmap(.l = list(qn, q_id), .f = c)
-    h_mean = c(q_mean_train, mean(unlist(q_id)))
-    # Second, compute the PCs
+    # Second, compute the PCs (centered using the training data mean stored by
+    # fdasrvf::vertFPCA, not a mean recomputed from the test data)
+    h_mean = fpca_train$mqn
     pcs = purrr::map(.x = h, .f = function(h) (h - h_mean) %*% fpca_train$U)
   } else if (fpca_type == "hfpca") {
-    nu_mean = rowMeans(matrix(unlist(nu), ncol = ntest, byrow = FALSE))
+    # Centered using the training data shooting vector mean stored by
+    # fdasrvf::horizFPCA, not a mean recomputed from the test data
+    nu_mean = fpca_train$vm
     pcs = purrr::map(.x = nu, .f = function(nu) (nu - nu_mean) %*% fpca_train$U)
   }
 
