@@ -14,7 +14,7 @@ Depends:
   R (>= 4.1.0)
 Imports:
   dplyr,
-  fdasrvf,
+  fdasrvf (>= 2.5.0),
   forcats,
   ggplot2 (>= 3.4.0),
   purrr,
