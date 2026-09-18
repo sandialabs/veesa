@@ -23,7 +23,7 @@
 #' @importFrom stringr str_replace
 #' @importFrom tidyr pivot_longer
 #'
-#' @returns ggplot2 plot of specified differences beteen principal component directions and the Karcher mean
+#' @returns ggplot2 plot of specified differences between principal component directions and the Karcher mean
 #'
 #' @examples
 #' # Load packages
