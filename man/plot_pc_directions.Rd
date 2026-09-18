@@ -28,13 +28,13 @@ plot_pc_directions(
 
 \item{digits}{Number of digits to print in the title for the proportion of variability explained by a PC}
 
-\item{alpha}{Vector of alpha values associated with lines in plot (length must match number of lines in plot)}
+\item{alpha}{Single value between 0 and 1 specifying the transparency applied to all lines in the plot}
 
 \item{nrow}{Number of rows to use when creating a grid of plots}
 
 \item{linesizes}{Vector of line widths associated with lines in plot (length must match number of lines in plot)}
 
-\item{linetype}{Vector of line types (e.g., "solid" or "dashed") associated with lines in plot (length must match number of lines in plot)}
+\item{linetype}{Single logical value indicating whether the lines should be distinguished by line type in addition to color}
 
 \item{freey}{Indicator for whether y-axis should be freed across facets}
 }

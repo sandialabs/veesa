@@ -4,7 +4,9 @@
 #'     in preparation for inputting the data to the model in step 4.
 #'
 #' @param f Matrix (size M x N) of training data with N functions and M samples.
-#' @param time Vector of size M corresponding to the M sample points.
+#' @param time Vector of size M corresponding to the M sample points. Only its
+#'        length is used: the sample points are rescaled to an equally spaced
+#'        grid on [0, 1] before alignment.
 #' @param fpca_method Character string specifying the type of elastic fPCA
 #'        method to use. Options are 'jfpca', 'hfpca', or 'vfpca'.
 #' @param lambda Numeric value specifying the elasticity. Default is 0.

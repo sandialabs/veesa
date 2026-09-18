@@ -2,7 +2,7 @@
 #'
 #' A simulated dataset generated for examples in the veesa pipeline manuscript. 
 #' For the code used to prepare this dataset, see
-#' https://github.com/sandialabs/veesa/inst/data-shifted-peaks.md.
+#' https://github.com/sandialabs/veesa/blob/master/inst/shifted-peaks.md.
 #'
 #' @format A list.
 #' 

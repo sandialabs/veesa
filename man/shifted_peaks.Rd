@@ -13,7 +13,7 @@ shifted_peaks
 \description{
 A simulated dataset generated for examples in the veesa pipeline manuscript. 
 For the code used to prepare this dataset, see
-https://github.com/sandialabs/veesa/inst/data-shifted-peaks.md.
+https://github.com/sandialabs/veesa/blob/master/inst/shifted-peaks.md.
 }
 \details{
 The objects in the list are:

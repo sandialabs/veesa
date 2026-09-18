@@ -4,7 +4,14 @@
 \alias{prep_testing_data}
 \title{Align test data and apply fPCA using elastic method applied to training data}
 \usage{
-prep_testing_data(f, time, train_prep, optim_method = "DP")
+prep_testing_data(
+  f,
+  time,
+  train_prep,
+  optim_method = "DP",
+  lambda = NULL,
+  penalty_method = NULL
+)
 }
 \arguments{
 \item{f}{Matrix (size M x N) of test data with N functions and M samples.}
@@ -16,6 +23,15 @@ training data.}
 
 \item{optim_method}{Method used for optimization when computing the Karcher
 mean. "DP", "DPo", and "RBFGS".}
+
+\item{lambda}{Numeric value specifying the elasticity used when aligning the
+test data. Default is NULL, which reuses the value that was used to
+align the training data.}
+
+\item{penalty_method}{A string specifying the penalty term used when
+aligning the test data. See `prep_training_data` for the available
+choices. Default is NULL, which reuses the penalty that was used to
+align the training data.}
 }
 \value{
 List containing (varies slightly based on fpca method used):
@@ -29,7 +45,10 @@ List containing (varies slightly based on fpca method used):
   \item mqn: training data SRSF mean (test data functions are aligned to
         this function)
   \item gam: test data warping functions - similar structure to f0
-  \item coef: test data principal component coefficients
+  \item coef: test data principal component coefficients - matrix with one
+        row per principal component and one column per test function (note
+        that this is the transpose of the layout used by the training data
+        coefficients in `prep_training_data`)
   \item psi: test data warping function SRVFs - similar structure to f0
         (jfpca and hfpca only)
   \item nu: test data shooting functions - similar structure to f0 (jfpca

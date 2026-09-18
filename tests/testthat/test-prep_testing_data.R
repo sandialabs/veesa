@@ -80,7 +80,53 @@ test_that("Function throws error with invalid optim_method", {
   )
 })
 
-# Test 5: Check for correct output when using different optimization methods
+# Test 5: Check that a test function is transformed the same way regardless of
+#         which other test functions it is scored alongside
+test_that("Coefficients do not depend on the rest of the test batch", {
+  for (fpca_method in c("jfpca", "hfpca", "vfpca")) {
+    train_prep <- prep_training_data(mock_f, mock_time, fpca_method)
+    full <- prep_testing_data(mock_f, mock_time, train_prep, "DP")
+    subset <- prep_testing_data(mock_f[, 1:3], mock_time, train_prep, "DP")
+    single <- prep_testing_data(
+      mock_f[, 1, drop = FALSE],
+      mock_time,
+      train_prep,
+      "DP"
+    )
+    # Scoring a subset gives the same coefficients as scoring the full batch
+    expect_equal(
+      subset$coef,
+      full$coef[, 1:3],
+      tolerance = 1e-6,
+      info = fpca_method
+    )
+    # A single test function is a valid batch and is not centered away
+    expect_equal(ncol(single$coef), 1, info = fpca_method)
+    expect_false(all(single$coef == 0), info = fpca_method)
+    expect_equal(
+      as.vector(single$coef),
+      as.vector(full$coef[, 1]),
+      tolerance = 1e-6,
+      info = fpca_method
+    )
+  }
+})
+
+# Test 6: Check that the alignment penalty can be set explicitly
+test_that("Function accepts an explicit alignment penalty", {
+  result <- prep_testing_data(
+    f = mock_f,
+    time = mock_time,
+    train_prep = mock_train_prep,
+    optim_method = "DP",
+    lambda = 0.01,
+    penalty_method = "l2gam"
+  )
+  expect_type(result, "list")
+  expect_equal(dim(result$coef), c(nrow(mock_f), ncol(mock_f)))
+})
+
+# Test 7: Check for correct output when using different optimization methods
 test_that("Function works with different optimization methods", {
   result_dp <- 
     prep_testing_data(

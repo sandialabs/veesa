@@ -9,8 +9,10 @@
 #'
 #' @importFrom stats approx
 #'
-#' @return Object with the same structure as `train_obj` but qn, fn, and gam
-#'         have been replaced by centered versions
+#' @export center_warping_funs
+#'
+#' @return Object with the same structure as `train_obj` but mqn, qn, fn, and
+#'         gam have been replaced by centered versions
 
 center_warping_funs <- function(train_obj) {
 
@@ -28,7 +30,7 @@ center_warping_funs <- function(train_obj) {
 
   # Apply centering
   time0 = (time[length(time)] - time[1]) * gamI + time[1]
-  mq = approx(time, mq, xout = time0)$y * sqrt(gamI_dev)
+  aligned$mqn = approx(time, mq, xout = time0)$y * sqrt(gamI_dev)
   for (k in 1:N){
     aligned$qn[,k] = approx(time, aligned$qn[,k], xout = time0)$y * sqrt(gamI_dev)
     aligned$fn[,k] = approx(time, aligned$fn[,k], xout = time0)$y

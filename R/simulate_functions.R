@@ -14,6 +14,7 @@
 #'
 #' @returns Data frame with the following columns (where f is the function):
 #' \itemize{
+#'   \item id: identifier for the function the observation belongs to
 #'   \item t: "time" associated with sample from function where t in [0,1]
 #'   \item y: f(t) for the particular observation
 #'   \item x1: covariate 1 for function $f$ (constant across time)
