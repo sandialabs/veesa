@@ -1,4 +1,8 @@
 library(testthat)
+
+# 'randomForest' is a Suggests dependency, so skip the whole file when it is not
+# installed rather than failing at load time.
+skip_if_not_installed("randomForest")
 library(randomForest)
 library(dplyr)
 

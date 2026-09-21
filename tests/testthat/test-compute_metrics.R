@@ -1,4 +1,8 @@
 library(testthat)
+
+# 'randomForest' is a Suggests dependency, so skip the whole file when it is not
+# installed rather than failing at load time.
+skip_if_not_installed("randomForest")
 library(randomForest)
 
 # Mock data for testing
@@ -75,4 +79,74 @@ test_that("compute_pfi assigns a larger value to the informative variable", {
   set.seed(1)
   pfi <- compute_pfi(mock_x, mock_y_num, rf_reg, K = 5, metric = "nmse")$pfi
   expect_gt(pfi[1], pfi[2])
+})
+
+# Test 8: Accuracy divides the number of correct predictions by n, so passing a
+#         larger n rescales the result accordingly
+test_that("compute_accuracy scales by the supplied n", {
+  correct <- sum(predict(rf_class, mock_x) == mock_y_class)
+  expect_equal(compute_accuracy(mock_x, mock_y_class, rf_class, n = 100), correct / 100)
+  # Doubling n halves the reported value (n is used verbatim as the denominator)
+  expect_equal(
+    compute_accuracy(mock_x, mock_y_class, rf_class, n = 200),
+    correct / 200
+  )
+})
+
+# Test 9: Log-loss clips probabilities to [eps, 1 - eps] so it stays finite even
+#         when a class probability is exactly 0 or 1
+test_that("compute_logloss clips extreme probabilities via eps", {
+  # A perfectly separable problem drives predicted probabilities to 0 / 1
+  set.seed(42)
+  sep_x <- data.frame(feature1 = c(rnorm(50, -5), rnorm(50, 5)))
+  sep_y <- factor(rep(c("A", "B"), each = 50))
+  sep_rf <- randomForest(x = sep_x, y = sep_y)
+  result <- compute_logloss(sep_x, sep_y, sep_rf, eps = 1e-15)
+  expect_true(is.finite(result))
+  # A larger eps clips more aggressively, giving a value no smaller (closer to 0)
+  result_loose <- compute_logloss(sep_x, sep_y, sep_rf, eps = 1e-3)
+  expect_gte(result_loose, result)
+})
+
+# Test 10: The multivariate branch of compute_nmse (used for randomForestSRC
+#          multivariate models) treats the responses as a single stacked vector.
+#          A lightweight fake model with a predict method exercises this branch
+#          without depending on randomForestSRC.
+test_that("compute_nmse handles matrix responses (multivariate branch)", {
+  # Build a fake model whose predictions we control
+  fake_model <- structure(
+    list(preds = list(r1 = c(1, 2, 3), r2 = c(4, 5, 6))),
+    class = "veesa_fake_mv"
+  )
+  # predict returns the $regrOutput structure the multivariate branch expects
+  predict.veesa_fake_mv <<- function(object, newdata, ...) {
+    list(regrOutput = list(
+      r1 = list(predicted = object$preds$r1),
+      r2 = list(predicted = object$preds$r2)
+    ))
+  }
+  on.exit(rm(predict.veesa_fake_mv, envir = globalenv()), add = TRUE)
+
+  x_mv <- data.frame(a = 1:3, b = 4:6)
+  y_mv <- matrix(c(1.5, 2, 2.5, 4, 5.5, 6), nrow = 3, ncol = 2)
+
+  result <- compute_nmse(x_mv, y_mv, fake_model, n = 3)
+
+  # Expected: stack predictions (r1 then r2) and the response as a vector, then
+  # take the negative mean squared error over all stacked elements
+  yhat <- c(1, 2, 3, 4, 5, 6)
+  yvec <- as.vector(y_mv)
+  expected <- -sum((yhat - yvec)^2) / length(yhat)
+  expect_equal(result, expected)
+  expect_true(result <= 0)
+})
+
+# Test 11: compute_pfi reports one PFI per feature and one row per repetition,
+#          and the averaged PFI is the row-mean of the single-rep matrix
+test_that("compute_pfi averages the single-repetition importances", {
+  set.seed(3)
+  result <- compute_pfi(mock_x, mock_y_num, rf_reg, K = 4, metric = "nmse")
+  expect_equal(length(result$pfi), ncol(mock_x))
+  expect_equal(dim(result$pfi_single_reps), c(4, ncol(mock_x)))
+  expect_equal(result$pfi, colMeans(result$pfi_single_reps))
 })

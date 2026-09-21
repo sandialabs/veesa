@@ -93,3 +93,29 @@ test_that("Function works with linetype turned off", {
   expect_s3_class(result, "ggplot")
   expect_no_warning(ggplot_build(result))
 })
+
+# Test 8: Check that vfpca objects are handled
+test_that("Function handles vfpca objects", {
+  mock_vfpca <- list(
+    latent = c(10, 5, 2, 1),
+    time = seq(0, 1, length.out = mock_M),
+    f_pca = array(rnorm(mock_M * 5 * 4), dim = c(mock_M, 5, 4))
+  )
+  result <- plot_pc_diffs(1:2, mock_vfpca, "vfpca")
+  expect_s3_class(result, "ggplot")
+  expect_no_warning(ggplot_build(result))
+  expect_equal(nlevels(result$data$fpc_facet), 2)
+})
+
+# Test 9: Check that an explicit time vector and free y-axis scales are accepted
+test_that("Function accepts explicit times and freey", {
+  result <- plot_pc_diffs(
+    fpcs = 1:2,
+    fdasrvf = mock_jfpca,
+    fpca_method = "jfpca",
+    times = seq(-1, 1, length.out = mock_M),
+    freey = TRUE
+  )
+  expect_s3_class(result, "ggplot")
+  expect_no_warning(ggplot_build(result))
+})
