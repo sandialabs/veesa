@@ -103,9 +103,13 @@ test_that("compute_logloss clips extreme probabilities via eps", {
   sep_rf <- randomForest(x = sep_x, y = sep_y)
   result <- compute_logloss(sep_x, sep_y, sep_rf, eps = 1e-15)
   expect_true(is.finite(result))
-  # A larger eps clips more aggressively, giving a value no smaller (closer to 0)
+  # compute_logloss returns the mean log-likelihood (negative of the log loss),
+  # so values are <= 0 and larger is better. On a separable problem every
+  # predicted probability lands on the correct class, so a larger eps pulls it
+  # further from 1 and drives the mean log-likelihood further below 0.
   result_loose <- compute_logloss(sep_x, sep_y, sep_rf, eps = 1e-3)
-  expect_gte(result_loose, result)
+  expect_true(is.finite(result_loose))
+  expect_lte(result_loose, result)
 })
 
 # Test 10: The multivariate branch of compute_nmse (used for randomForestSRC
